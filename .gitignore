@@ -1,2 +1,6 @@
 # pipeline run state (regenerated on every run)
 refined-chat-archive/.run/
+
+# python bytecode
+__pycache__/
+*.py[cod]
