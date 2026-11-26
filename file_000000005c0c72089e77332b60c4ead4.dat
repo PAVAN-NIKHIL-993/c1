@@ -1,0 +1,145 @@
+import React, { useRef, useEffect, useCallback } from "react";
+import { PPGPoint } from "../utils/ppgSignal";
+
+interface WaveformCanvasProps {
+  data: PPGPoint[];
+  color: string;
+  label: string;
+  width: number;
+  height: number;
+  minVal?: number;
+  maxVal?: number;
+  showGrid?: boolean;
+  scrollSpeed?: number; // pixels per second
+  timeWindow?: number;  // seconds visible
+  showRIAV?: boolean;
+  showRIIV?: boolean;
+  currentTime?: number;
+}
+
+const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
+  data,
+  color,
+  label,
+  width,
+  height,
+  minVal = -12,
+  maxVal = 12,
+  showGrid = true,
+  timeWindow = 10,
+  currentTime = 0,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    // Background
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, width, height);
+
+    // Grid
+    if (showGrid) {
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 0.5;
+      // Vertical grid lines (1 per second)
+      for (let s = 0; s <= timeWindow; s++) {
+        const x = (s / timeWindow) * width;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      // Horizontal grid lines
+      const gridLines = 6;
+      for (let g = 0; g <= gridLines; g++) {
+        const y = (g / gridLines) * height;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+    }
+
+    // Zero line
+    const zeroY = height - ((0 - minVal) / (maxVal - minVal)) * height;
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(0, zeroY);
+    ctx.lineTo(width, zeroY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (data.length === 0) return;
+
+    // Determine visible time range
+    const endTime = currentTime;
+    const startTime = endTime - timeWindow;
+
+    // Filter visible data
+    const visible = data.filter(
+      (p) => p.time >= startTime && p.time <= endTime
+    );
+
+    if (visible.length < 2) return;
+
+    // Draw waveform glow
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.8;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    visible.forEach((point, idx) => {
+      const x = ((point.time - startTime) / timeWindow) * width;
+      const y =
+        height - ((point.value - minVal) / (maxVal - minVal)) * height;
+
+      if (idx === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Draw sweep cursor (vertical line at current position)
+    const cursorX = width; // always at right edge in scrolling mode
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.moveTo(cursorX - 6, 0);
+    ctx.lineTo(cursorX - 6, height);
+    ctx.stroke();
+
+    // Label
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = color;
+    ctx.font = "bold 11px 'Courier New', monospace";
+    ctx.fillText(label, 6, 16);
+  }, [data, color, label, width, height, minVal, maxVal, showGrid, timeWindow, currentTime]);
+
+  useEffect(() => {
+    draw();
+  }, [draw]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: `${width}px`, height: `${height}px` }}
+      className="block"
+    />
+  );
+};
+
+export default WaveformCanvas;

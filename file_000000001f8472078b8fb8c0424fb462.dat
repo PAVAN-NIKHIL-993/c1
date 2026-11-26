@@ -1,0 +1,584 @@
+[env:DF ROBOT esp32-c3 MINI]
+platform = espressif32
+board = esp32-c3-devkitm-1
+framework = arduino
+monitor_speed = 115200
+
+lib_deps =
+---------------------------------------------------------
+✓ Heart Rate Detection
+✓ Motion Rejection
+✓ Roll / Pitch / Yaw
+✓ Walking Detection
+✓ Running Detection
+✓ Resting Detection
+✓ Active Detection
+✓ Health Status Estimation
+✓ Real-Time Biomedical Monitoring
+✓ Complementary Filter
+✓ BPM Smoothing
+✓ Wearable Style Firmware
+=========================================================
+*/
+
+#include <Wire.h>
+#include "MAX30105.h"
+#include <math.h>
+
+// =====================================================
+// I2C PINS
+// =====================================================
+#define SDA_PIN 8
+#define SCL_PIN 9
+
+// =====================================================
+// MPU6050
+// =====================================================
+#define MPU6050_ADDR 0x68
+
+// =====================================================
+// MAX30102
+// =====================================================
+MAX30105 particleSensor;
+
+// =====================================================
+// HEART RATE VARIABLES
+// =====================================================
+float stableBPM = 0;
+float bpmRaw = 0;
+
+float irFiltered = 0;
+float irProcessed = 0;
+
+float peakThreshold = 0;
+float valleyThreshold = 0;
+
+float irPrev = 0;
+bool risingEdge = false;
+
+bool isCalibrating = true;
+
+unsigned long lastBeatTime = 0;
+unsigned long lastPrint = 0;
+
+const float alpha = 0.93;
+
+// =====================================================
+// BPM SMOOTHING
+// =====================================================
+#define BPM_WINDOW 8
+
+float bpmWindow[BPM_WINDOW];
+uint8_t bpmIndex = 0;
+bool bpmWindowFilled = false;
+
+// =====================================================
+// MPU6050 VARIABLES
+// =====================================================
+float ax, ay, az;
+float gx, gy, gz;
+
+float roll = 0;
+float pitch = 0;
+float yaw = 0;
+
+float gyroBiasX = 0;
+float gyroBiasY = 0;
+float gyroBiasZ = 0;
+
+unsigned long lastMPUTime = 0;
+
+// =====================================================
+// ACTIVITY VARIABLES
+// =====================================================
+String activityStatus = "UNKNOWN";
+String healthStatus = "ANALYZING";
+
+float accelMagnitude = 0;
+float gyroMagnitude = 0;
+
+// =====================================================
+// FUNCTION DECLARATIONS
+// =====================================================
+void initializeMPU6050();
+void calibrateGyro();
+void readMPU();
+void calculateAngles();
+void processHeartRate();
+void updateStableBPM(float bpm);
+
+bool motionDetected();
+
+void detectActivity();
+void evaluateHealth();
+
+// =====================================================
+// SETUP
+// =====================================================
+void setup()
+{
+    Serial.begin(115200);
+
+    Wire.begin(SDA_PIN, SCL_PIN);
+    Wire.setClock(400000);
+
+    // =================================================
+    // MAX30102 INIT
+    // =================================================
+    if (!particleSensor.begin(Wire, I2C_SPEED_FAST))
+    {
+        Serial.println("MAX30102 NOT FOUND");
+        while (1);
+    }
+
+    particleSensor.setup(
+        0x3F,
+        4,
+        2,
+        100,
+        411,
+        4096
+    );
+
+    particleSensor.setPulseAmplitudeIR(0x3F);
+    particleSensor.setPulseAmplitudeRed(0x1F);
+
+    // =================================================
+    // MPU6050 INIT
+    // =================================================
+    initializeMPU6050();
+
+    calibrateGyro();
+
+    lastMPUTime = micros();
+
+    Serial.println("========================================");
+    Serial.println("SMART HEALTH WEARABLE READY");
+    Serial.println("Place finger on MAX30102");
+    Serial.println("========================================");
+}
+
+// =====================================================
+// LOOP
+// =====================================================
+void loop()
+{
+    readMPU();
+
+    calculateAngles();
+
+    processHeartRate();
+
+    detectActivity();
+
+    evaluateHealth();
+
+    // =================================================
+    // SERIAL OUTPUT
+    // =================================================
+    if (millis() - lastPrint >= 1000)
+    {
+        lastPrint = millis();
+
+        Serial.print("HR: ");
+        Serial.print(stableBPM, 1);
+        Serial.print(" BPM");
+
+        Serial.print(" | Activity: ");
+        Serial.print(activityStatus);
+
+        Serial.print(" | Health: ");
+        Serial.print(healthStatus);
+
+        Serial.print(" | Roll: ");
+        Serial.print(roll, 1);
+
+        Serial.print(" | Pitch: ");
+        Serial.print(pitch, 1);
+
+        Serial.print(" | Yaw: ");
+        Serial.print(yaw, 1);
+
+        Serial.print(" | Motion: ");
+
+        if (motionDetected())
+            Serial.println("YES");
+        else
+            Serial.println("NO");
+    }
+}
+
+// =====================================================
+// MPU6050 INIT
+// =====================================================
+void initializeMPU6050()
+{
+    Wire.beginTransmission(MPU6050_ADDR);
+    Wire.write(0x6B);
+    Wire.write(0x00);
+    Wire.endTransmission(true);
+
+    delay(100);
+
+    Serial.println("MPU6050 Initialized");
+}
+
+// =====================================================
+// GYRO CALIBRATION
+// =====================================================
+void calibrateGyro()
+{
+    Serial.println("Calibrating Gyroscope...");
+
+    long gxSum = 0;
+    long gySum = 0;
+    long gzSum = 0;
+
+    for (int i = 0; i < 1000; i++)
+    {
+        readMPU();
+
+        gxSum += gx;
+        gySum += gy;
+        gzSum += gz;
+
+        delay(2);
+    }
+
+    gyroBiasX = gxSum / 1000.0;
+    gyroBiasY = gySum / 1000.0;
+    gyroBiasZ = gzSum / 1000.0;
+
+    Serial.println("Gyroscope Calibration Done");
+}
+
+// =====================================================
+// READ MPU6050
+// =====================================================
+void readMPU()
+{
+    Wire.beginTransmission(MPU6050_ADDR);
+    Wire.write(0x3B);
+    Wire.endTransmission(false);
+
+    Wire.requestFrom(MPU6050_ADDR, 14, true);
+
+    int16_t axRaw =
+        Wire.read() << 8 | Wire.read();
+
+    int16_t ayRaw =
+        Wire.read() << 8 | Wire.read();
+
+    int16_t azRaw =
+        Wire.read() << 8 | Wire.read();
+
+    Wire.read();
+    Wire.read();
+
+    int16_t gxRaw =
+        Wire.read() << 8 | Wire.read();
+
+    int16_t gyRaw =
+        Wire.read() << 8 | Wire.read();
+
+    int16_t gzRaw =
+        Wire.read() << 8 | Wire.read();
+
+    ax = axRaw / 16384.0;
+    ay = ayRaw / 16384.0;
+    az = azRaw / 16384.0;
+
+    gx = gxRaw / 131.0 - gyroBiasX;
+    gy = gyRaw / 131.0 - gyroBiasY;
+    gz = gzRaw / 131.0 - gyroBiasZ;
+
+    accelMagnitude =
+        sqrt(ax * ax + ay * ay + az * az);
+
+    gyroMagnitude =
+        sqrt(gx * gx + gy * gy + gz * gz);
+}
+
+// =====================================================
+// ANGLE CALCULATION
+// =====================================================
+void calculateAngles()
+{
+    unsigned long now = micros();
+
+    float dt =
+        (now - lastMPUTime) / 1000000.0;
+
+    lastMPUTime = now;
+
+    float accelRoll =
+        atan2(ay, az) * 57.2958;
+
+    float accelPitch =
+        atan2(
+            -ax,
+            sqrt(ay * ay + az * az)
+        ) * 57.2958;
+
+    roll =
+        0.98 * (roll + gx * dt) +
+        0.02 * accelRoll;
+
+    pitch =
+        0.98 * (pitch + gy * dt) +
+        0.02 * accelPitch;
+
+    yaw += gz * dt;
+
+    if (yaw > 180) yaw -= 360;
+    if (yaw < -180) yaw += 360;
+}
+
+// =====================================================
+// MOTION DETECTION
+// =====================================================
+bool motionDetected()
+{
+    if (abs(accelMagnitude - 1.0) > 0.15)
+        return true;
+
+    if (gyroMagnitude > 20)
+        return true;
+
+    return false;
+}
+
+// =====================================================
+// ACTIVITY DETECTION
+// =====================================================
+void detectActivity()
+{
+    // RESTING
+    if (
+        gyroMagnitude < 8 &&
+        abs(accelMagnitude - 1.0) < 0.05
+    )
+    {
+        activityStatus = "RESTING";
+    }
+
+    // WALKING
+    else if (
+        gyroMagnitude >= 8 &&
+        gyroMagnitude < 35
+    )
+    {
+        activityStatus = "WALKING";
+    }
+
+    // RUNNING
+    else if (
+        gyroMagnitude >= 35
+    )
+    {
+        activityStatus = "RUNNING";
+    }
+
+    // ACTIVE MOVEMENT
+    else
+    {
+        activityStatus = "ACTIVE";
+    }
+}
+
+// =====================================================
+// HEALTH ANALYSIS
+// =====================================================
+void evaluateHealth()
+{
+    // No finger
+    if (stableBPM <= 0)
+    {
+        healthStatus = "NO FINGER";
+        return;
+    }
+
+    // Resting BPM
+    if (activityStatus == "RESTING")
+    {
+        if (stableBPM >= 55 && stableBPM <= 90)
+            healthStatus = "GOOD";
+
+        else if (
+            stableBPM > 90 &&
+            stableBPM <= 110
+        )
+            healthStatus = "AVERAGE";
+
+        else
+            healthStatus = "RISK";
+    }
+
+    // Walking BPM
+    else if (activityStatus == "WALKING")
+    {
+        if (stableBPM >= 70 && stableBPM <= 120)
+            healthStatus = "GOOD";
+
+        else
+            healthStatus = "AVERAGE";
+    }
+
+    // Running BPM
+    else if (activityStatus == "RUNNING")
+    {
+        if (stableBPM <= 165)
+            healthStatus = "ACTIVE";
+
+        else
+            healthStatus = "HIGH STRESS";
+    }
+
+    else
+    {
+        healthStatus = "MONITORING";
+    }
+}
+
+// =====================================================
+// HEART RATE PROCESSING
+// =====================================================
+void processHeartRate()
+{
+    uint32_t ir = particleSensor.getIR();
+
+    // =================================================
+    // NO FINGER
+    // =================================================
+    if (ir < 20000)
+    {
+        stableBPM = 0;
+        bpmRaw = 0;
+        isCalibrating = true;
+        return;
+    }
+
+    // =================================================
+    // FILTER
+    // =================================================
+    irFiltered =
+        alpha * irFiltered +
+        (1.0 - alpha) * ir;
+
+    irProcessed = irFiltered;
+
+    // =================================================
+    // CALIBRATION
+    // =================================================
+    if (isCalibrating)
+    {
+        if (peakThreshold == 0)
+        {
+            peakThreshold = irProcessed;
+            valleyThreshold = irProcessed;
+        }
+
+        if (irProcessed > peakThreshold)
+            peakThreshold = irProcessed;
+
+        if (irProcessed < valleyThreshold)
+            valleyThreshold = irProcessed;
+
+        static int calibrationCounter = 0;
+        calibrationCounter++;
+
+        if (calibrationCounter > 200)
+        {
+            isCalibrating = false;
+            Serial.println("Heart Calibration Done");
+        }
+
+        return;
+    }
+
+    // =================================================
+    // THRESHOLD
+    // =================================================
+    float signalAmplitude =
+        peakThreshold - valleyThreshold;
+
+    float dynamicThreshold =
+        valleyThreshold +
+        signalAmplitude * 0.55;
+
+    float derivative =
+        irProcessed - irPrev;
+
+    irPrev = irProcessed;
+
+    unsigned long now = millis();
+
+    // =================================================
+    // BEAT DETECTION
+    // =================================================
+    if (
+        derivative > 0 &&
+        !risingEdge &&
+        irProcessed > dynamicThreshold &&
+        !motionDetected() &&
+        (now - lastBeatTime) > 300
+    )
+    {
+        unsigned long interval =
+            now - lastBeatTime;
+
+        if (
+            interval > 333 &&
+            interval < 1500
+        )
+        {
+            bpmRaw =
+                60000.0 / interval;
+
+            updateStableBPM(bpmRaw);
+        }
+
+        lastBeatTime = now;
+        risingEdge = true;
+    }
+
+    if (derivative < 0)
+        risingEdge = false;
+
+    peakThreshold =
+        0.995 * peakThreshold +
+        0.005 * irProcessed;
+
+    valleyThreshold =
+        0.995 * valleyThreshold +
+        0.005 * irProcessed;
+}
+
+// =====================================================
+// BPM SMOOTHING
+// =====================================================
+void updateStableBPM(float bpm)
+{
+    if (bpm < 40 || bpm > 180)
+        return;
+
+    bpmWindow[bpmIndex] = bpm;
+
+    bpmIndex =
+        (bpmIndex + 1) % BPM_WINDOW;
+
+    if (bpmIndex == 0)
+        bpmWindowFilled = true;
+
+    int count =
+        bpmWindowFilled ?
+        BPM_WINDOW :
+        bpmIndex;
+
+    float sum = 0;
+
+    for (int i = 0; i < count; i++)
+        sum += bpmWindow[i];
+
+    stableBPM = sum / count;
+}

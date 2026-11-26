@@ -1,0 +1,284 @@
+import React, { useRef, useEffect, useCallback } from "react";
+import { PPGPoint } from "../utils/ppgSignal";
+
+interface PPGAnalysisCanvasProps {
+  data: PPGPoint[];
+  width: number;
+  height: number;
+  hr: number;
+  rr: number;
+  currentTime: number;
+  timeWindow?: number;
+}
+
+const PPGAnalysisCanvas: React.FC<PPGAnalysisCanvasProps> = ({
+  data,
+  width,
+  height,
+  hr,
+  rr,
+  currentTime,
+  timeWindow = 10,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || data.length === 0) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, width, height);
+
+    const minVal = -12;
+    const maxVal = 12;
+    const endTime = currentTime;
+    const startTime = endTime - timeWindow;
+
+    // Grid
+    ctx.strokeStyle = "rgba(255,255,255,0.07)";
+    ctx.lineWidth = 0.5;
+    for (let s = 0; s <= timeWindow; s++) {
+      const x = (s / timeWindow) * width;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+    for (let g = 0; g <= 6; g++) {
+      const y = (g / 6) * height;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    const visible = data.filter(
+      (p) => p.time >= startTime && p.time <= endTime
+    );
+    if (visible.length < 2) return;
+
+    const toX = (t: number) => ((t - startTime) / timeWindow) * width;
+    const toY = (v: number) =>
+      height - ((v - minVal) / (maxVal - minVal)) * height;
+
+    // --- Draw PPG (blue) ---
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = "#4488ff";
+    ctx.strokeStyle = "#4488ff";
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    visible.forEach((p, i) => {
+      i === 0 ? ctx.moveTo(toX(p.time), toY(p.value)) : ctx.lineTo(toX(p.time), toY(p.value));
+    });
+    ctx.stroke();
+
+    // --- Find peaks and troughs in visible data ---
+    const beatPeriod = 60 / hr;
+    void rr; // rr used for respiratory context
+
+    // Detect peaks (local maxima above threshold)
+    const peaks: { t: number; v: number; x: number; y: number }[] = [];
+    const troughs: { t: number; v: number; x: number; y: number }[] = [];
+    const minPeakDist = Math.floor((beatPeriod * 0.6) * (visible.length / timeWindow));
+
+    for (let i = 5; i < visible.length - 5; i++) {
+      const curr = visible[i].value;
+      let isPeak = true;
+      let isTrough = true;
+      for (let j = i - 5; j <= i + 5; j++) {
+        if (j === i) continue;
+        if (visible[j].value >= curr) isPeak = false;
+        if (visible[j].value <= curr) isTrough = false;
+      }
+      if (isPeak && curr > 2) {
+        if (peaks.length === 0 || i - peaks[peaks.length - 1].x > minPeakDist * 0.4) {
+          peaks.push({ t: visible[i].time, v: curr, x: i, y: toY(curr) });
+        }
+      }
+      if (isTrough && curr < 0) {
+        if (troughs.length === 0 || i - troughs[troughs.length - 1].x > minPeakDist * 0.4) {
+          troughs.push({ t: visible[i].time, v: curr, x: i, y: toY(curr) });
+        }
+      }
+    }
+
+    // --- Draw RIAV (red vertical arrows between peak pairs) ---
+    // RIAV shows amplitude variation between consecutive systolic peaks
+    ctx.shadowBlur = 0;
+    if (peaks.length >= 2) {
+      // Pick 2 peak pairs to annotate (spread across window)
+      const pairIndices = [
+        Math.floor(peaks.length * 0.15),
+        Math.floor(peaks.length * 0.65),
+      ].filter((i) => i < peaks.length - 1);
+
+      pairIndices.forEach((pi) => {
+        if (pi + 1 >= peaks.length) return;
+        const p1 = peaks[pi];
+        const p2 = peaks[pi + 1];
+        const midX = (toX(p1.t) + toX(p2.t)) / 2;
+
+        ctx.strokeStyle = "#ff2222";
+        ctx.fillStyle = "#ff2222";
+        ctx.lineWidth = 2;
+
+        // Arrow from p2 down to p1 level (or vice versa for amplitude diff)
+        const topY = Math.min(p1.y, p2.y);
+        const botY = Math.max(p1.y, p2.y) + (toY(troughs[0]?.v ?? -4) - toY(0)) * 0.3;
+
+        // Vertical line
+        ctx.beginPath();
+        ctx.moveTo(midX, topY - 2);
+        ctx.lineTo(midX, botY + toY(-4) * 0.1);
+        ctx.stroke();
+
+        // Arrowheads
+        const aw = 5;
+        // Top arrow
+        ctx.beginPath();
+        ctx.moveTo(midX - aw, topY + 6);
+        ctx.lineTo(midX, topY - 2);
+        ctx.lineTo(midX + aw, topY + 6);
+        ctx.stroke();
+        // Bottom arrow
+        const bY = topY + 40;
+        ctx.beginPath();
+        ctx.moveTo(midX - aw, bY - 6);
+        ctx.lineTo(midX, bY + 2);
+        ctx.lineTo(midX + aw, bY - 6);
+        ctx.stroke();
+
+        // Horizontal tick marks
+        ctx.lineWidth = 1.5;
+        [-1, 1].forEach((side) => {
+          ctx.beginPath();
+          ctx.moveTo(midX + side * aw, topY - 2);
+          ctx.lineTo(midX, topY - 2);
+          ctx.stroke();
+        });
+      });
+    }
+
+    // --- Draw RIIV (green line connecting consecutive peaks across breath) ---
+    // RIIV: envelope of peak amplitudes modulated by respiration
+    if (peaks.length >= 3) {
+      ctx.strokeStyle = "#00dd44";
+      ctx.fillStyle = "#00dd44";
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 5;
+      ctx.shadowColor = "#00dd44";
+
+      const riivPeaks = peaks.slice(0, Math.min(peaks.length, 6));
+      ctx.beginPath();
+      riivPeaks.forEach((p, i) => {
+        const x = toX(p.t);
+        i === 0 ? ctx.moveTo(x, p.y) : ctx.lineTo(x, p.y);
+      });
+      ctx.stroke();
+
+      // Dots at each peak
+      riivPeaks.forEach((p) => {
+        ctx.beginPath();
+        ctx.arc(toX(p.t), p.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = "#00dd44";
+        ctx.fill();
+      });
+
+      ctx.shadowBlur = 0;
+    }
+
+    // --- Draw RIFV (orange dashed horizontal arrows showing IBI variation) ---
+    // RIFV: inter-beat interval variation
+    if (peaks.length >= 4) {
+      const lastPeaks = peaks.slice(-3);
+      ctx.strokeStyle = "#ff8800";
+      ctx.setLineDash([6, 4]);
+      ctx.lineWidth = 2;
+
+      const arrowY = height * 0.88;
+
+      for (let i = 0; i < lastPeaks.length - 1; i++) {
+        const x1 = toX(lastPeaks[i].t);
+        const x2 = toX(lastPeaks[i + 1].t);
+
+        // Vertical dashed lines at each peak
+        ctx.beginPath();
+        ctx.moveTo(x1, lastPeaks[i].y);
+        ctx.lineTo(x1, arrowY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x2, lastPeaks[i + 1].y);
+        ctx.lineTo(x2, arrowY);
+        ctx.stroke();
+
+        // Horizontal arrow between them
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(x1, arrowY);
+        ctx.lineTo(x2, arrowY);
+        ctx.stroke();
+
+        // Arrowheads
+        const aw = 6;
+        ctx.beginPath();
+        ctx.moveTo(x1 + aw, arrowY - aw / 2);
+        ctx.lineTo(x1, arrowY);
+        ctx.lineTo(x1 + aw, arrowY + aw / 2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x2 - aw, arrowY - aw / 2);
+        ctx.lineTo(x2, arrowY);
+        ctx.lineTo(x2 - aw, arrowY + aw / 2);
+        ctx.stroke();
+
+        ctx.setLineDash([6, 4]);
+      }
+      ctx.setLineDash([]);
+    }
+
+    // --- Legend ---
+    ctx.shadowBlur = 0;
+    const legends = [
+      { label: "PPG", color: "#4488ff" },
+      { label: "RIAV", color: "#ff2222" },
+      { label: "RIIV", color: "#00dd44" },
+      { label: "RIFV", color: "#ff8800" },
+    ];
+    legends.forEach((l, i) => {
+      ctx.fillStyle = l.color;
+      ctx.font = "bold 10px 'Courier New', monospace";
+      ctx.fillText(l.label, 8, height - 10 - i * 14);
+    });
+
+    // Time axis
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.font = "10px 'Courier New', monospace";
+    for (let s = 0; s <= timeWindow; s += 2) {
+      const x = (s / timeWindow) * width;
+      ctx.fillText(`${Math.floor(startTime + s)}s`, x + 2, height - 2);
+    }
+  }, [data, width, height, hr, rr, currentTime, timeWindow]);
+
+  useEffect(() => {
+    draw();
+  }, [draw]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: `${width}px`, height: `${height}px` }}
+      className="block"
+    />
+  );
+};
+
+export default PPGAnalysisCanvas;

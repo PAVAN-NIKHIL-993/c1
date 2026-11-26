@@ -1,0 +1,144 @@
+#include <math.h>
+#include <driver/adc.h>
+#include <esp_adc_cal.h>
+
+#define THERMISTOR_PIN      ADC1_CHANNEL_3
+#define SERIES_RESISTOR     100000.0
+#define THERMISTOR_NOMINAL  100000.0
+#define TEMPERATURE_NOMINAL 25.0
+#define B_COEFFICIENT       3950.0
+#define DEFAULT_VREF        1100
+#define NUM_SAMPLES         50
+#define V_SUPPLY            3.3
+
+// ── IF TEMP IS TOO LOW  → change to 1 ──────────────────────
+// ── IF TEMP IS TOO HIGH → keep as 0 ───────────────────────
+#define SWAP_FORMULA        1
+
+// ── Fine tune offset — increase if still too low ────────────
+#define TEMP_OFFSET         0.0
+
+static esp_adc_cal_characteristics_t adc_chars;
+
+float readTemperature() {
+  for (int i = 0; i < 5; i++) {
+    adc1_get_raw(THERMISTOR_PIN);
+    delay(5);
+  }
+
+  uint32_t adc_sum = 0;
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    adc_sum += adc1_get_raw(THERMISTOR_PIN);
+    delay(5);
+  }
+  uint32_t adc_raw = adc_sum / NUM_SAMPLES;
+
+  Serial.print("DEBUG ADC: ");
+  Serial.println(adc_raw);
+
+  if (adc_raw <= 5 || adc_raw >= 4090) {
+    Serial.println("ERROR: Check wiring!");
+    return -999;
+  }
+
+  uint32_t voltage_mv = esp_adc_cal_raw_to_voltage(adc_raw, &adc_chars);
+  float voltage = voltage_mv / 1000.0;
+
+  Serial.print("DEBUG Voltage: ");
+  Serial.print(voltage, 4);
+  Serial.println(" V");
+
+  float resistance;
+
+  #if SWAP_FORMULA == 1
+    // Thermistor on BOTTOM: 3.3V → Resistor → ADC → Thermistor → GND
+    resistance = SERIES_RESISTOR * ((V_SUPPLY / voltage) - 1.0);
+  #else
+    // Thermistor on TOP: 3.3V → Thermistor → ADC → Resistor → GND
+    resistance = SERIES_RESISTOR * (voltage / (V_SUPPLY - voltage));
+  #endif
+
+  Serial.print("DEBUG Resistance: ");
+  Serial.print(resistance, 0);
+  Serial.println(" ohm");
+
+  if (resistance <= 0) {
+    Serial.println("ERROR: Invalid resistance!");
+    return -999;
+  }
+
+  float steinhart;
+  steinhart  = resistance / THERMISTOR_NOMINAL;
+  steinhart  = log(steinhart);
+  steinhart /= B_COEFFICIENT;
+  steinhart += 1.0 / (TEMPERATURE_NOMINAL + 273.15);
+  steinhart  = 1.0 / steinhart;
+  steinhart -= 273.15;
+  steinhart += TEMP_OFFSET;
+
+  Serial.print("DEBUG Temp: ");
+  Serial.print(steinhart, 2);
+  Serial.println(" C");
+
+  if (steinhart < -10.0 || steinhart > 120.0) {
+    Serial.println("ERROR: Out of -10C to 120C range!");
+    return -999;
+  }
+
+  return steinhart;
+}
+
+String getStatus(float tempC) {
+  if      (tempC <  0.0)   return "BELOW ZERO";
+  else if (tempC < 10.0)   return "VERY COLD";
+  else if (tempC < 20.0)   return "COLD";
+  else if (tempC < 25.0)   return "COOL";
+  else if (tempC < 35.0)   return "ROOM TEMP";
+  else if (tempC < 37.0)   return "WARM";
+  else if (tempC < 38.5)   return "BODY TEMP";
+  else if (tempC < 50.0)   return "HOT";
+  else if (tempC < 80.0)   return "VERY HOT";
+  else if (tempC <= 120.0) return "CRITICAL";
+  else                     return "OUT OF RANGE";
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+
+  adc1_config_width(ADC_WIDTH_BIT_12);
+  adc1_config_channel_atten(THERMISTOR_PIN, ADC_ATTEN_DB_11);
+  esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, DEFAULT_VREF, &adc_chars);
+
+  Serial.println("================================");
+  Serial.println("   ESP32-C3 NTC Thermistor");
+  Serial.println("   Range: -10C to 120C");
+  Serial.println("================================");
+  delay(1000);
+}
+
+void loop() {
+  float tempC = readTemperature();
+
+  if (tempC == -999) {
+    delay(1000);
+    return;
+  }
+
+  float tempF = (tempC * 9.0 / 5.0) + 32.0;
+  String status = getStatus(tempC);
+
+  Serial.println("================================");
+  Serial.print("Celsius    : ");
+  Serial.print(tempC, 2);
+  Serial.println(" C");
+  Serial.print("Fahrenheit : ");
+  Serial.print(tempF, 2);
+  Serial.println(" F");
+  Serial.print("Status     : ");
+  Serial.println(status);
+  Serial.println("================================");
+  Serial.println();
+
+  delay(1000);
+}
