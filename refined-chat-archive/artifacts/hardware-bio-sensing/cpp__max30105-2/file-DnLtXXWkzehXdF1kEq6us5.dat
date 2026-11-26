@@ -1,0 +1,175 @@
+#include <Wire.h>
+#include "MAX30105.h"
+#include "MPU6050.h"
+
+MAX30105 ppg;
+MPU6050 mpu;
+
+// ===== ORIGINAL PARAMETERS =====
+#define SAMPLE_RATE 100
+#define BUFFER_SIZE 300
+
+float respBuffer[BUFFER_SIZE];
+int indexBuf = 0;
+
+float dc_avg = 0;
+float lp_out = 0;
+
+float alpha_dc = 0.01;
+float alpha_lp = 0.95;
+
+float motion_k = 0.02;
+
+// ===== NEW ALGORITHM VARIABLES =====
+float prev = 0, prev_prev = 0;
+float curr = 0;
+
+float diff = 0, prev_diff = 0;
+
+float cycle_min = 999, cycle_max = -999;
+
+unsigned long last_rise_time = 0;
+
+// tuning
+float EPS = 0.0005;
+float AMP_TH = 0.002;
+int MIN_CYCLE = 2000;   // ms
+int MAX_CYCLE = 10000;  // ms
+
+// ===== OLD PEAK DETECTION =====
+float prev1 = 0, prev2 = 0;
+unsigned long last_peak_time = 0;
+int breath_count = 0;
+
+// ===== FINGER + MOTION CONTROL =====
+long FINGER_THRESHOLD = 50000;
+float motion_threshold = 1.2;
+
+void setup() {
+  Serial.begin(115200);
+
+  Wire.begin();
+
+  ppg.begin(Wire);
+  ppg.setup();
+  ppg.setPulseAmplitudeIR(0x1F);
+
+  mpu.initialize();
+}
+
+void loop() {
+
+  // ===== READ PPG =====
+  long ir = ppg.getIR();
+  
+  // ===== FINGER CHECK =====
+if (ir < FINGER_THRESHOLD) {
+  Serial.println("No finger");
+  
+  // reset important variables
+  last_rise_time = 0;
+  cycle_min = 999;
+  cycle_max = -999;
+  breath_count = 0;
+
+  delay(200);
+  return;
+}
+
+  // ===== DC REMOVAL =====
+  dc_avg = (1 - alpha_dc) * dc_avg + alpha_dc * ir;
+  float ac = ir - dc_avg;
+
+  // ===== NORMALIZATION =====
+  float ppg_norm = ac / dc_avg;
+
+  // ===== MOTION =====
+  int16_t ax, ay, az;
+  mpu.getAcceleration(&ax, &ay, &az);
+
+  float accel = sqrt(ax * ax + ay * ay + az * az) / 16384.0;
+  float motion = abs(accel - 1.0);  // remove gravity
+   // ===== MOTION CHECK =====
+  if (motion > motion_threshold) {
+  Serial.println("Motion detected");
+  delay(50);
+  return;
+}
+
+  float clean_ppg = ppg_norm - motion_k * motion;
+
+  // ===== LOW PASS FILTER =====
+  lp_out = alpha_lp * lp_out + (1 - alpha_lp) * clean_ppg;
+
+  // ===== STORE BUFFER =====
+  respBuffer[indexBuf] = lp_out;
+  indexBuf = (indexBuf + 1) % BUFFER_SIZE;
+
+  // =====================================================
+  // ===== OLD PEAK-BASED RR (UNCHANGED) =====
+  // =====================================================
+  if (prev1 > prev2 && prev1 > lp_out) {
+    unsigned long now = millis();
+
+    if (now - last_peak_time > 2000) {
+      breath_count++;
+      last_peak_time = now;
+    }
+  }
+
+  prev2 = prev1;
+  prev1 = lp_out;
+
+  // =====================================================
+  // ===== NEW SLOPE-BASED RR (YOUR ALGORITHM) =====
+  // =====================================================
+
+  curr = lp_out;
+
+  // smoother slope
+  diff = (curr - prev_prev) / 2;
+
+  // remove noise
+  if (abs(diff) < EPS) diff = 0;
+
+  // track amplitude
+  if (curr > cycle_max) cycle_max = curr;
+  if (curr < cycle_min) cycle_min = curr;
+
+  unsigned long now = millis();
+
+  // detect rise start
+  if (prev_diff <= 0 && diff > 0) {
+
+    if (last_rise_time != 0) {
+
+      float cycle_time = now - last_rise_time;
+
+      if (cycle_time > MIN_CYCLE && cycle_time < MAX_CYCLE) {
+
+        float amplitude = cycle_max - cycle_min;
+
+        if (amplitude > AMP_TH) {
+
+          float rr = 60000.0 / cycle_time;
+
+          Serial.print("RR (new): ");
+          Serial.println(rr);
+        }
+      }
+    }
+
+    // reset cycle
+    cycle_min = 999;
+    cycle_max = -999;
+
+    last_rise_time = now;
+  }
+
+  // update
+  prev_prev = prev;
+  prev = curr;
+  prev_diff = diff;
+
+  delay(10); // 100 Hz
+}

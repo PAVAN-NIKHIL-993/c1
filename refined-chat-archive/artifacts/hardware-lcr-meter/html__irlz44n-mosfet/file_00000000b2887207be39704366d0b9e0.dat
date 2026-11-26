@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Revised Technical Corrections</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:1000px;margin:auto;padding:20px;line-height:1.6}
+h1,h2{color:#1a237e}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #ccc;padding:8px}
+th{background:#eef}
+.good{background:#e8f5e9;padding:10px;border-left:4px solid #2e7d32}
+.warn{background:#fff3e0;padding:10px;border-left:4px solid #ef6c00}
+code{background:#f4f4f4;padding:2px 4px}
+</style>
+</head>
+<body>
+<h1>IRLZ44N Wireless TX Coil Driver - Revised Engineering Notes</h1>
+
+<div class="good">
+This revision keeps the ESP32 → 100Ω → IRLZ44N architecture unchanged as requested.
+</div>
+
+<h2>Corrections Applied</h2>
+
+<table>
+<tr><th>Original</th><th>Revised</th></tr>
+<tr><td>"IRLZ44N fully ON at 3.3V"</td><td>"IRLZ44N is logic-level and generally suitable for 3.3V drive at modest power, but performance depends on current and operating conditions."</td></tr>
+<tr><td>"1 MHz, 8-bit PWM"</td><td>"At 1 MHz, LEDC resolution may be reduced by hardware limits. Use the highest resolution supported by the actual ESP32 configuration."</td></tr>
+<tr><td>1N4148 flyback diode recommendation</td><td>Removed. Use optional TVS protection or RC snubber if needed.</td></tr>
+<tr><td>Guaranteed 2-5× coil voltage gain</td><td>Changed to possible outcome under high-Q resonance.</td></tr>
+<tr><td>Guaranteed LED brightening</td><td>Changed to expected but not guaranteed; depends on coupling and phase.</td></tr>
+</table>
+
+<h2>Verified Coil Calculations</h2>
+
+<p>For 1 MHz operation:</p>
+
+<table>
+<tr><th>Inductance</th><th>Calculated Capacitance</th></tr>
+<tr><td>5 µH</td><td>≈ 5066 pF</td></tr>
+<tr><td>7 µH</td><td>≈ 3620 pF</td></tr>
+<tr><td>20 µH</td><td>≈ 1266 pF</td></tr>
+</table>
+
+<p>The original capacitor recommendations of 3300 pF, 4700 pF, and 5600 pF remain technically reasonable for tuning.</p>
+
+<h2>Recommended Power Section</h2>
+
+<ul>
+<li>470 µF low-ESR electrolytic across supply rails</li>
+<li>1 µF ceramic near MOSFET</li>
+<li>100 nF ceramic near MOSFET</li>
+<li>Star-ground wiring recommended</li>
+<li>Fuse on supply input recommended</li>
+</ul>
+
+<h2>IRLZ44N Section</h2>
+
+<p>
+IRLZ44N is acceptable for hobby experimentation around 1 MHz but is not an RF-optimized MOSFET.
+Expect increased switching losses and heating compared with dedicated RF devices.
+Use a heatsink when operating above several watts.
+</p>
+
+<h2>Final Assessment</h2>
+
+<p>
+With these corrections, the document becomes substantially more accurate while preserving the original architecture and avoiding the addition of a dedicated gate driver.
+</p>
+
+</body>
+</html>

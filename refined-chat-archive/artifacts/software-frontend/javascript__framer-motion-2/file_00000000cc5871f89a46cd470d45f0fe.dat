@@ -1,0 +1,208 @@
+import { motion } from "framer-motion";
+
+export default function IntroScreen() {
+
+    return (
+
+        <div
+            style={{
+                height: "100vh",
+                width: "100%",
+                background:
+                    "linear-gradient(135deg,#F4EEF7,#F8F5FF)",
+
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+
+                overflow: "hidden",
+                position: "relative",
+            }}
+        >
+
+            {/* BACKGROUND BLOBS */}
+
+            <motion.div
+
+                animate={{
+                    x: [0, 40, 0],
+                    y: [0, -30, 0],
+                }}
+
+                transition={{
+                    repeat: Infinity,
+                    duration: 10,
+                }}
+
+                style={{
+                    position: "absolute",
+                    width: "500px",
+                    height: "500px",
+                    borderRadius: "50%",
+                    background: "rgba(203,108,230,0.18)",
+                    filter: "blur(120px)",
+                    top: "-100px",
+                    right: "-100px",
+                }}
+            />
+
+            <motion.div
+
+                animate={{
+                    x: [0, -40, 0],
+                    y: [0, 30, 0],
+                }}
+
+                transition={{
+                    repeat: Infinity,
+                    duration: 14,
+                }}
+
+                style={{
+                    position: "absolute",
+                    width: "450px",
+                    height: "450px",
+                    borderRadius: "50%",
+                    background: "rgba(232,180,255,0.15)",
+                    filter: "blur(120px)",
+                    bottom: "-100px",
+                    left: "-100px",
+                }}
+            />
+
+            {/* CENTER PANEL */}
+
+            <motion.div
+
+                initial={{
+                    opacity: 0,
+                    scale: 0.8,
+                }}
+
+                animate={{
+                    opacity: 1,
+                    scale: 1,
+                }}
+
+                transition={{
+                    duration: 1.2,
+                }}
+
+                style={{
+                    width: "520px",
+                    height: "520px",
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.45)",
+                    backdropFilter: "blur(30px)",
+
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+
+                    boxShadow:
+                        "0 20px 80px rgba(203,108,230,0.25)",
+                }}
+            >
+
+                {/* LOGO */}
+
+                <motion.div
+
+                    animate={{
+                        scale: [1, 1.06, 1],
+                    }}
+
+                    transition={{
+                        repeat: Infinity,
+                        duration: 2,
+                    }}
+
+                    style={{
+                        width: "180px",
+                        height: "180px",
+                        borderRadius: "50%",
+
+                        background: "white",
+
+                        border: "12px solid #CB6CE6",
+
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+
+                        fontSize: "70px",
+
+                        boxShadow:
+                            "0 10px 40px rgba(203,108,230,0.35)",
+                    }}
+                >
+                    ❤️
+                </motion.div>
+
+                <h1
+                    style={{
+                        marginTop: "40px",
+                        fontSize: "58px",
+                        fontFamily: "Orbitron",
+                        color: "#7A36F0",
+                        letterSpacing: "2px",
+                    }}
+                >
+                    VI-TRAK-637
+                </h1>
+
+                <p
+                    style={{
+                        marginTop: "14px",
+                        fontSize: "18px",
+                        color: "#666",
+                        textAlign: "center",
+                        width: "70%",
+                    }}
+                >
+                    Continuous Intelligent Health Monitoring
+                </p>
+
+                {/* LOADING */}
+
+                <div
+                    style={{
+                        marginTop: "40px",
+                        width: "280px",
+                        height: "12px",
+                        background: "rgba(255,255,255,0.5)",
+                        borderRadius: "20px",
+                        overflow: "hidden",
+                    }}
+                >
+
+                    <motion.div
+
+                        initial={{
+                            width: 0,
+                        }}
+
+                        animate={{
+                            width: "100%",
+                        }}
+
+                        transition={{
+                            duration: 4,
+                        }}
+
+                        style={{
+                            height: "100%",
+
+                            background:
+                                "linear-gradient(to right,#CB6CE6,#E8B4FF)",
+                        }}
+                    />
+
+                </div>
+
+            </motion.div>
+
+        </div>
+    );
+}

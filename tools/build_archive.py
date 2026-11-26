@@ -642,20 +642,16 @@ def parse_text_log(text: str, rel: str) -> tuple[list[Conversation], str]:
         buf.append(line)
     flush()
 
-    if not msgs:
-        # 3) unlabelled but non-empty: keep the whole text verbatim as one turn
-        return ([Conversation(
-            conv_id=hashlib.sha256(text.encode()).hexdigest()[:16],
-            title=Path(rel).stem,
-            create_time=None, update_time=None, current_node=None,
-            mapping={"flat-00000": {"id": "flat-00000", "parent": None,
-                                    "children": [],
-                                    "message": {"author": {"role": "unknown"},
-                                                "content": {"content_type": "text",
-                                                            "parts": [text]},
-                                                "create_time": None}}},
-            source_path=rel, source_kind="dat-text", source_sha256="")],
-            "verbatim")
+    # BAR FOR BEING A CONVERSATION (deliberately strict):
+    # at least 2 role headers, and at least one of them must be a user-ish role.
+    # Without this, any source file containing the word "User:" or "System:"
+    # would be promoted into a fake single-turn "conversation" -- inventing
+    # dialogue that never existed. Files that fail this bar are catalogued as
+    # ARTIFACTS, never as conversations.
+    roles = [m["author"]["role"] for m in msgs]
+    has_user = any(r in ("user", "human") for r in roles)
+    if len(msgs) < 2 or not has_user:
+        return [], "not-a-conversation"
     return ([Conversation(
         conv_id=hashlib.sha256((rel + str(len(msgs))).encode()).hexdigest()[:16],
         title=Path(rel).stem,

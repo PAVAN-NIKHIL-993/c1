@@ -1,0 +1,66 @@
+import React, { useState, useEffect } from "react";
+
+interface MonitorHeaderProps {
+  patientName: string;
+  bedNumber: string;
+  patientType: string;
+  waveCount: string;
+}
+
+const MonitorHeader: React.FC<MonitorHeaderProps> = ({
+  patientName,
+  bedNumber,
+  patientType,
+  waveCount,
+}) => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (d: Date) =>
+    d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  return (
+    <div
+      className="flex items-center justify-between px-4 py-1 text-sm font-bold"
+      style={{
+        background: "#1a1a1a",
+        borderBottom: "1px solid #333",
+        color: "#cccccc",
+        fontFamily: "'Courier New', monospace",
+      }}
+    >
+      <div className="flex items-center gap-6">
+        <span style={{ color: "#ffffff" }}>Bed {bedNumber}</span>
+        <span style={{ color: "#ffffff" }}>{patientName}</span>
+        <span style={{ color: "#aaaaaa" }}>{patientType}</span>
+      </div>
+      <div className="flex items-center gap-6">
+        <span style={{ color: "#ffffff" }}>{formatTime(time)}</span>
+        <span style={{ color: "#aaaaaa" }}>{waveCount}</span>
+        {/* Battery / alarm icons */}
+        <div className="flex items-center gap-2">
+          <div
+            className="w-5 h-3 border border-gray-400 relative"
+            style={{ borderRadius: 2 }}
+          >
+            <div
+              className="absolute inset-0.5 bg-green-400"
+              style={{ borderRadius: 1, width: "70%" }}
+            />
+            <div
+              className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-1 h-1.5 bg-gray-400"
+              style={{ borderRadius: 1 }}
+            />
+          </div>
+          <span style={{ color: "#888" }}>▲</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MonitorHeader;

@@ -1,0 +1,202 @@
+Microsoft Windows [Version 10.0.19045.7548]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\WINDOWS\system32>reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v OneDriveSetup /f
+ERROR: The system was unable to find the specified registry key or value.
+
+C:\WINDOWS\system32>reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v OneDriveSetup /f
+ERROR: The system was unable to find the specified registry key or value.
+
+C:\WINDOWS\system32>reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v MirrorTo /f
+The operation completed successfully.
+
+C:\WINDOWS\system32>sc qc KslD
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: KslD
+        TYPE               : 1  KERNEL_DRIVER
+        START_TYPE         : 3   DEMAND_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : system32\drivers\wd\KslD.sys
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : KslD
+        DEPENDENCIES       :
+        SERVICE_START_NAME :
+
+C:\WINDOWS\system32>driverquery /v | findstr /I KslD
+KslD         KslD                   KslD                   Kernel        Manual     Running    OK         TRUE        FALSE        4,096             53,248      0                                 C:\WINDOWS\system32\drivers\wd\KslD.sys          8,192
+
+C:\WINDOWS\system32>wmic product get name
+Name
+Microsoft Teams Meeting Add-in for Microsoft Office
+Office 16 Click-to-Run Extensibility Component
+Microsoft GameInput
+Update for x64-based Windows Systems (KB5001716)
+Microsoft Visual C++ 2022 X64 Minimum Runtime - 14.44.35211
+Fritzing
+Microsoft Visual C++ 2010  x64 Redistributable - 10.0.40219
+Microsoft Visual C++ 2013 x86 Minimum Runtime - 12.0.40664
+Proteus 9 Professional
+Microsoft Visual C++ 2010  x86 Redistributable - 10.0.40219
+Microsoft .NET Host - 10.0.10 (x86)
+Microsoft Update Health Tools
+Microsoft Visual C++ 2022 X86 Additional Runtime - 14.44.35211
+Microsoft Visual C++ 2013 x64 Minimum Runtime - 12.0.40664
+Java 8 Update 491 (64-bit)
+Microsoft Visual C++ 2022 X86 Minimum Runtime - 14.44.35211
+Java(TM) SE Development Kit 26.0.1 (64-bit)
+Microsoft Visual C++ 2008 Redistributable - x86 9.0.30729.6161
+Microsoft Visual C++ 2012 x64 Additional Runtime - 11.0.61030
+UE4 Prerequisites (x64)
+
+Microsoft Visual C++ 2022 X64 Additional Runtime - 14.44.35211
+Microsoft Windows Desktop Runtime - 10.0.10 (x86)
+Microsoft Visual C++ 2013 x64 Additional Runtime - 12.0.40664
+Microsoft Visual C++ 2005 Redistributable
+Microsoft Visual C++ 2012 x64 Minimum Runtime - 11.0.61030
+Microsoft .NET Host FX Resolver - 10.0.10 (x86)
+Microsoft .NET Runtime - 10.0.10 (x86)
+Microsoft Visual C++ 2013 x86 Additional Runtime - 12.0.40664
+Universal Adb Driver
+PuTTY release 0.83 (64-bit)
+Java Auto Updater
+
+
+C:\WINDOWS\system32>winget list
+The `msstore` source requires that you view the following agreements before using.
+Terms of Transaction: https://aka.ms/microsoft-store-terms-of-transaction
+The source requires the current machine's 2-letter geographic region to be sent to the backend service to function properly (ex. "US").
+
+Do you agree to all the source agreements terms?
+[Y] Yes  [N] No: y
+Name                                   Id                                     Version             Available     Source
+-----------------------------------------------------------------------------------------------------------------------
+3D Viewer                              MSIX\Microsoft.Microsoft3DViewer_7.26… 7.2602.8012.0
+AOMEI Partition Assistant 9.1          ARP\Machine\X86\{04F850ED-FD0F-4ED1-A… Unknown
+App Installer                          Microsoft.AppInstaller                 1.29.280.0                        winget
+Arduino IDE 2.3.8                      ArduinoSA.IDE.stable                   2.3.8                             winget
+Autodesk Fusion                        Autodesk.Fusion                        2703.1.20           2704.1.36     winget
+AV1 Video Extension                    MSIX\Microsoft.AV1VideoExtension_2.0.… 2.0.24.0
+Cross Device Experience Host           MSIX\MicrosoftWindows.CrossDevice_0.2… 0.25072.59.0
+DirectX                                Microsoft.DirectX                      9.29.1974.0                       winget
+DirectX                                Microsoft.DirectX                      9.29.1974.0                       winget
+draw.io 29.0.3                         JGraph.Draw                            29.0.3              31.0.2        winget
+English (United Kingdom) Local Experi… MSIX\Microsoft.LanguageExperiencePack… 19041.62.219.0
+FreeCAD 1.1.1                          FreeCAD.FreeCAD                        1.1.1               1.1.2         winget
+FreeFileSync                           ARP\Machine\X86\FreeFileSync_is1       14.9
+Fritzing                               ARP\Machine\X64\{5F3F2C51-3A6C-49B7-A… 1.0.5.0
+Game Bar                               MSIX\Microsoft.XboxGamingOverlay_7.32… 7.326.6011.0
+Get Help                               MSIX\Microsoft.GetHelp_10.2409.41132.… 10.2409.41132.0
+Git                                    Git.Git                                2.51.1              2.55.0.3      winget
+Google Chrome                          ARP\Machine\X86\Google Chrome          151.0.7922.71
+GSmartControl                          AlexanderShaduri.GSmartControl         2.0.2                             winget
+Hard Disk Sentinel PRO                 ARP\Machine\X86\Hard Disk Sentinel_is1 6.20
+HEIF Image Extension                   MSIX\Microsoft.HEIFImageExtension_1.2… 1.2.36.0
+HEVC Video Extensions from Device Man… MSIX\Microsoft.HEVCVideoExtension_2.4… 2.4.45.0
+HP Smart                               MSIX\AD2F1837.HPPrinterControl_165.4.… 165.4.1108.0
+Iriun Webcam version 2.9.3             ARP\Machine\X86\IriunWebcam_is1        2.9.3
+iVMS-4200                              ARP\Machine\X64\{CE2F96D0-63D2-4B9C-A… 3.14.0.6
+Java 8 Update 491 (64-bit)             Oracle.JavaRuntimeEnvironment          8.0.4910.10         8.0.5010.8    winget
+Java(TM) SE Development Kit 26.0.1 (6… Oracle.JDK.26                          26.0.1.0            26.0.2.0      winget
+KiCad 10.0                             KiCad.KiCad                            10.0.4              10.0.5        winget
+Local AI Manager for Microsoft 365     MSIX\aimgr_0.20.60.0_x64__8wekyb3d8bb… 0.20.60.0
+Mail and Calendar                      MSIX\microsoft.windowscommunicationsa… 16005.14326.22342.0
+Microsoft .Net Native Framework Packa… MSIX\Microsoft.NET.Native.Framework.1… 1.7.27413.0
+Microsoft .Net Native Framework Packa… MSIX\Microsoft.NET.Native.Framework.1… 1.7.27413.0
+Microsoft .Net Native Framework Packa… MSIX\Microsoft.NET.Native.Framework.2… 2.2.29512.0
+Microsoft .Net Native Framework Packa… MSIX\Microsoft.NET.Native.Framework.2… 2.2.29512.0
+Microsoft .Net Native Runtime Package… MSIX\Microsoft.NET.Native.Runtime.1.7… 1.7.27422.0
+Microsoft .Net Native Runtime Package… MSIX\Microsoft.NET.Native.Runtime.1.7… 1.7.27422.0
+Microsoft .Net Native Runtime Package… Microsoft.DotNet.Native.Runtime        2.2.28604.0                       winget
+Microsoft .Net Native Runtime Package… Microsoft.DotNet.Native.Runtime        2.2.28604.0                       winget
+Microsoft 365 - en-gb                  ARP\Machine\X64\O365HomePremRetail - … 16.0.20228.20110
+Microsoft Bing                         MSIX\Microsoft.BingSearch_1.1.40.0_x6… 1.1.40.0
+Microsoft Defender                     MSIX\Microsoft.6365217CE6EB4_102.2504… 102.2504.16003.0
+Microsoft Edge                         Microsoft.Edge                         150.0.4078.105                    winget
+Microsoft Edge                         MSIX\Microsoft.MicrosoftEdge.Stable_1… 150.0.4078.105
+Microsoft GameInput                    Microsoft.GameInput                    3.3.221.0           3.4.218       winget
+Microsoft Pay                          MSIX\Microsoft.Wallet_2.4.18324.0_x64… 2.4.18324.0
+Microsoft Photos                       MSIX\Microsoft.Windows.Photos_2026.11… 2026.11060.2004.0
+Microsoft Sticky Notes                 MSIX\Microsoft.MicrosoftStickyNotes_6… 6.1.4.0
+Microsoft Store                        MSIX\Microsoft.WindowsStore_22606.140… 22606.1401.7.0
+Microsoft Teams Meeting Add-in for Mi… ARP\Machine\X64\{A7AB73A3-CB10-4AA5-9… 1.26.02603
+Microsoft Tips                         MSIX\Microsoft.Getstarted_10.2312.1.0… 10.2312.1.0
+Microsoft Update Health Tools          ARP\Machine\X64\{1FC1A6C2-576E-489A-9… 3.74.0.0
+Microsoft Visual C++ 2005 Redistribut… Microsoft.VCRedist.2005.x86            8.0.61187                         winget
+Microsoft Visual C++ 2008 Redistribut… Microsoft.VCRedist.2008.x86            9.0.30729.6161                    winget
+Microsoft Visual C++ 2010  x64 Redist… Microsoft.VCRedist.2010.x64            10.0.40219                        winget
+Microsoft Visual C++ 2010  x86 Redist… Microsoft.VCRedist.2010.x86            10.0.40219                        winget
+Microsoft Visual C++ 2012 Redistribut… Microsoft.VCRedist.2012.x64            11.0.61030.0                      winget
+Microsoft Visual C++ 2012 UWP Desktop… MSIX\Microsoft.VCLibs.110.00.UWPDeskt… 11.0.61135.0
+Microsoft Visual C++ 2012 UWP Desktop… MSIX\Microsoft.VCLibs.110.00.UWPDeskt… 11.0.61135.0
+Microsoft Visual C++ 2013 Redistribut… Microsoft.VCRedist.2013.x64            12.0.40664.0                      winget
+Microsoft Visual C++ 2013 Redistribut… Microsoft.VCRedist.2013.x86            12.0.40664.0                      winget
+Microsoft Visual C++ 2013 UWP Desktop… MSIX\Microsoft.VCLibs.120.00.UWPDeskt… 12.0.40653.0
+Microsoft Visual C++ 2013 UWP Desktop… MSIX\Microsoft.VCLibs.120.00.UWPDeskt… 12.0.40653.0
+Microsoft Visual C++ 2015 UWP Desktop… Microsoft.VCLibs.Desktop.14            14.0.33728.0                      winget
+Microsoft Visual C++ 2015 UWP Desktop… Microsoft.VCLibs.Desktop.14            14.0.33728.0                      winget
+Microsoft Visual C++ 2015 UWP Runtime… Microsoft.VCLibs.14                    14.0.33519.0                      winget
+Microsoft Visual C++ 2015 UWP Runtime… Microsoft.VCLibs.14                    14.0.33519.0                      winget
+Microsoft Visual C++ 2015 UWP Runtime… Microsoft.VCLibs.14                    14.0.27323.0                      winget
+Microsoft Visual C++ 2015-2022 Redist… Microsoft.VCRedist.2015+.x64           14.44.35211.0       14.51.36247.0 winget
+Microsoft Visual C++ 2015-2022 Redist… Microsoft.VCRedist.2015+.x86           14.44.35211.0       14.51.36247.0 winget
+Microsoft Visual Studio Code (User)    XP9KHM4BK9FZ7Q                         1.121.0                           msstore
+Microsoft Windows Desktop Runtime 10.… Microsoft.DotNet.DesktopRuntime.10     10.0.10                           winget
+Microsoft.Office.ActionsServer         MSIX\Microsoft.Office.ActionsServer_1… 16.0.20228.20110
+Microsoft.UI.Xaml.2.3                  MSIX\Microsoft.UI.Xaml.2.3_2.32002.13… 2.32002.13001.0
+Microsoft.UI.Xaml.2.3                  MSIX\Microsoft.UI.Xaml.2.3_2.32002.13… 2.32002.13001.0
+Microsoft.UI.Xaml.2.4                  MSIX\Microsoft.UI.Xaml.2.4_2.42007.90… 2.42007.9001.0
+Microsoft.UI.Xaml.2.4                  MSIX\Microsoft.UI.Xaml.2.4_2.42007.90… 2.42007.9001.0
+Microsoft.UI.Xaml.2.7                  Microsoft.UI.Xaml.2.7                  7.2409.9001.0                     winget
+Microsoft.UI.Xaml.2.7                  Microsoft.UI.Xaml.2.7                  7.2409.9001.0                     winget
+Microsoft.UI.Xaml.2.8                  Microsoft.UI.Xaml.2.8                  8.2501.31001.0                    winget
+Microsoft.UI.Xaml.2.8                  Microsoft.UI.Xaml.2.8                  8.2501.31001.0                    winget
+MPEG-2 Video Extension                 MSIX\Microsoft.MPEG2VideoExtension_1.… 1.2.13.0
+MSN Weather                            MSIX\Microsoft.BingWeather_4.54.63045… 4.54.63045.0
+MuMuPlayer                             ARP\Machine\X64\MuMuPlayerGlobal       5.30.2.3616
+Nosteam CSGO 1.36.2.0                  ARP\Machine\X86\{F2E1A34E-20E9-4F6E-A… 1.36.2.0
+Notepad++ (64-bit x64)                 Notepad++.Notepad++                    8.9.6.4             8.9.7         winget
+OfficePushNotificationsUtility         MSIX\Microsoft.OfficePushNotification… 16.0.20228.20110
+Prince of Persia T2T                   ARP\Machine\X86\{DFFE2B1F-07E0-45A9-8… Unknown
+Proteus 9 Professional                 ARP\Machine\X64\{3A7035D1-6B53-4DCF-8… 9.0.40482.2
+PuTTY release 0.83 (64-bit)            PuTTY.PuTTY                            0.83.0.0            0.84.0.0      winget
+qBittorrent                            qBittorrent.qBittorrent                5.2.2               5.2.3         winget
+Raw Image Extension                    MSIX\Microsoft.RawImageExtension_2.4.… 2.4.24.0
+Recuva                                 Piriform.Recuva                        1.54.120                          winget
+Reliance Netconnect - Broadband+       ARP\Machine\X86\Reliance Netconnect -… 11.030.01.16.114
+Snip & Sketch                          MSIX\Microsoft.ScreenSketch_10.2008.3… 10.2008.3001.0
+Store Experience Host                  MSIX\Microsoft.StorePurchaseApp_22605… 22605.1401.3.0
+Universal Adb Driver                   ClockworkMod.UniversalADBDriver        1.0.4                             winget
+Update for x64-based Windows Systems … ARP\Machine\X64\{B8D93870-98D1-4980-A… 8.94.0.0
+VisiPics V1.31                         ARP\Machine\X86\VisiPics_is1           Unknown
+VLC media player                       VideoLAN.VLC                           3.0.23                            winget
+VP9 Video Extensions                   MSIX\Microsoft.VP9VideoExtensions_1.2… 1.2.20.0
+Vysor                                  Vysor.Vysor                            2.2.1               5.0.7         winget
+Web Media Extensions                   MSIX\Microsoft.WebMediaExtensions_1.2… 1.2.29.0
+WebP Image Extension                   MSIX\Microsoft.WebpImageExtension_1.2… 1.2.14.0
+Windows Advanced Settings              MSIX\Microsoft.Windows.DevHome_0.2100… 0.2100.858.0
+Windows Calculator                     MSIX\Microsoft.WindowsCalculator_11.2… 11.2605.9.0
+Windows Camera                         MSIX\Microsoft.WindowsCamera_2026.260… 2026.2605.7.0
+Windows Clock                          MSIX\Microsoft.WindowsAlarms_11.2605.… 11.2605.10.0
+Windows Media Player                   MSIX\Microsoft.ZuneMusic_11.2605.14.0… 11.2605.14.0
+Windows Package Manager Source (winge… MSIX\Microsoft.Winget.Source_2026.730… 2026.730.228.20
+Windows Voice Recorder                 MSIX\Microsoft.WindowsSoundRecorder_1… 10.2103.28.0
+WindowsAppRuntime.1.5                  Microsoft.WindowsAppRuntime.1.5        1.5.9                             winget
+WindowsAppRuntime.1.5                  Microsoft.WindowsAppRuntime.1.5        1.5.9                             winget
+WindowsAppRuntime.1.6                  Microsoft.WindowsAppRuntime.1.6        1.6.9                             winget
+WindowsAppRuntime.1.6                  Microsoft.WindowsAppRuntime.1.6        1.6.9                             winget
+WindowsAppRuntime.1.7                  Microsoft.WindowsAppRuntime.1.7        1.7.9                             winget
+WindowsAppRuntime.1.7                  Microsoft.WindowsAppRuntime.1.7        1.7.9                             winget
+WindowsAppRuntime.1.7                  Microsoft.WindowsAppRuntime.1.7        1.7.6                             winget
+WindowsAppRuntime.1.7                  Microsoft.WindowsAppRuntime.1.7        1.7.5                             winget
+WindowsAppRuntime.1.8                  Microsoft.WindowsAppRuntime.1.8        1.8.9                             winget
+WindowsAppRuntime.1.8                  Microsoft.WindowsAppRuntime.1.8        1.8.9                             winget
+WindowsAppRuntime.2                    Microsoft.WindowsAppRuntime.2          2.2.0.0                           winget
+WindowsAppRuntime.2                    Microsoft.WindowsAppRuntime.2          2.2.0.0                           winget
+WinRAR 7.13 (64-bit)                   RARLab.WinRAR                          7.13.0              7.23.0        winget
+Xbox Game Bar Plugin                   MSIX\Microsoft.XboxGameOverlay_1.54.4… 1.54.4001.0
+Xbox Game Speech Window                MSIX\Microsoft.XboxSpeechToTextOverla… 1.21.13002.0
+Xbox Identity Provider                 MSIX\Microsoft.XboxIdentityProvider_1… 12.130.16001.0
+
+C:\WINDOWS\system32>
