@@ -1,0 +1,570 @@
+/*
+   ============================================
+   ESP8266 Multi Patient Monitoring System
+   10 Patients + Editable Names
+   Editable Calibration Values
+   Live Web Dashboard
+   CSV Download
+   CD74HC4067 Multiplexer
+   ============================================
+*/
+
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <math.h>
+
+// =====================================
+// Multiplexer Pins
+// =====================================
+
+#define SIG_PIN A0
+
+#define S0 D1
+#define S1 D2
+#define S2 D3
+#define S3 D4
+
+// =====================================
+// WiFi Credentials
+// =====================================
+
+const char* ssid = "GPT_PEND 1";
+const char* password = "123123124";
+
+ESP8266WebServer server(80);
+
+// =====================================
+// Thermistor Configuration
+// =====================================
+
+const float SERIES_RESISTOR      = 68000.0;
+const float NOMINAL_RESISTANCE   = 65000.0;
+const float NOMINAL_TEMPERATURE  = 25.0;
+const float BETA_COEFFICIENT     = 3950.0;
+
+const int NUM_SAMPLES = 15;
+
+// =====================================
+// Patient Configuration
+// =====================================
+
+const int TOTAL_PATIENTS = 10;
+
+// =====================================
+// Patient Names
+// =====================================
+
+String patientNames[TOTAL_PATIENTS] =
+{
+    "Patient 1",
+    "Patient 2",
+    "Patient 3",
+    "Patient 4",
+    "Patient 5",
+    "Patient 6",
+    "Patient 7",
+    "Patient 8",
+    "Patient 9",
+    "Patient 10"
+};
+
+// =====================================
+// Patient Data
+// =====================================
+
+float patientTempC[TOTAL_PATIENTS];
+float patientTempF[TOTAL_PATIENTS];
+
+String patientStatus[TOTAL_PATIENTS];
+
+// Individual calibration offsets
+float calibrationOffset[TOTAL_PATIENTS] =
+{
+    12.5,12.5,12.5,12.5,12.5,
+    12.5,12.5,12.5,12.5,12.5
+};
+
+// =====================================
+// CSV Storage
+// =====================================
+
+String csvData =
+"Time_Minutes,Patient,Temp_C,Temp_F,Status\n";
+
+unsigned long previousLogTime = 0;
+
+const unsigned long LOG_INTERVAL = 60000;
+
+// =====================================
+// Function Prototypes
+// =====================================
+
+void selectChannel(int channel);
+
+float readTemperatureC(int patient);
+
+String getHealthStatus(float temp);
+
+void handleRoot();
+
+void handleCSV();
+
+void handleEdit();
+
+// =====================================
+// Setup
+// =====================================
+
+void setup()
+{
+    Serial.begin(115200);
+
+    pinMode(S0, OUTPUT);
+    pinMode(S1, OUTPUT);
+    pinMode(S2, OUTPUT);
+    pinMode(S3, OUTPUT);
+
+    Serial.println();
+    Serial.println("================================");
+    Serial.println("Medical Monitoring System");
+    Serial.println("================================");
+
+    // =====================================
+    // Connect WiFi
+    // =====================================
+
+    WiFi.begin(ssid, password);
+
+    Serial.print("Connecting");
+
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+
+    Serial.println();
+    Serial.println("WiFi Connected");
+
+    Serial.print("IP Address : ");
+    Serial.println(WiFi.localIP());
+
+    // =====================================
+    // Web Routes
+    // =====================================
+
+    server.on("/", handleRoot);
+
+    server.on("/download", handleCSV);
+
+    server.on("/edit", handleEdit);
+
+    server.begin();
+
+    Serial.println("Web Server Started");
+}
+
+// =====================================
+// Main Loop
+// =====================================
+
+void loop()
+{
+    server.handleClient();
+
+    unsigned long currentMillis = millis();
+
+    // =====================================
+    // Update Every 5 Seconds
+    // =====================================
+
+    static unsigned long previousRead = 0;
+
+    if (currentMillis - previousRead >= 5000)
+    {
+        previousRead = currentMillis;
+
+        for (int i = 0; i < TOTAL_PATIENTS; i++)
+        {
+            float tempC = readTemperatureC(i);
+
+            float tempF =
+                (tempC * 9.0 / 5.0) + 32.0;
+
+            String status =
+                getHealthStatus(tempC);
+
+            patientTempC[i] = tempC;
+
+            patientTempF[i] = tempF;
+
+            patientStatus[i] = status;
+
+            Serial.print(patientNames[i]);
+
+            Serial.print(" : ");
+
+            Serial.print(tempC);
+
+            Serial.print(" C | ");
+
+            Serial.println(status);
+        }
+
+        Serial.println("--------------------------------");
+    }
+
+    // =====================================
+    // Save Logs Every Minute
+    // =====================================
+
+    if (currentMillis - previousLogTime >= LOG_INTERVAL)
+    {
+        previousLogTime = currentMillis;
+
+        unsigned long minutes =
+            currentMillis / 60000;
+
+        for (int i = 0; i < TOTAL_PATIENTS; i++)
+        {
+            csvData += String(minutes);
+
+            csvData += ",";
+
+            csvData += patientNames[i];
+
+            csvData += ",";
+
+            csvData += String(patientTempC[i], 2);
+
+            csvData += ",";
+
+            csvData += String(patientTempF[i], 2);
+
+            csvData += ",";
+
+            csvData += patientStatus[i];
+
+            csvData += "\n";
+        }
+    }
+}
+
+// =====================================
+// Select Multiplexer Channel
+// =====================================
+
+void selectChannel(int channel)
+{
+    digitalWrite(S0, channel & 1);
+
+    digitalWrite(S1,
+                 (channel >> 1) & 1);
+
+    digitalWrite(S2,
+                 (channel >> 2) & 1);
+
+    digitalWrite(S3,
+                 (channel >> 3) & 1);
+}
+
+// =====================================
+// Read Temperature
+// =====================================
+
+float readTemperatureC(int patient)
+{
+    selectChannel(patient);
+
+    delay(5);
+
+    float averageADC = 0;
+
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        averageADC += analogRead(SIG_PIN);
+
+        delay(5);
+    }
+
+    averageADC /= NUM_SAMPLES;
+
+    if (averageADC <= 1)
+    {
+        return -100;
+    }
+
+    float resistance;
+
+    resistance =
+        SERIES_RESISTOR /
+        ((1023.0 / averageADC) - 1);
+
+    float temperatureK;
+
+    temperatureK =
+        1.0 /
+        (
+            (1.0 /
+            (NOMINAL_TEMPERATURE + 273.15))
+            +
+            (
+                log(
+                    resistance /
+                    NOMINAL_RESISTANCE
+                )
+                /
+                BETA_COEFFICIENT
+            )
+        );
+
+    float temperatureC =
+        temperatureK - 273.15;
+
+    // Individual calibration
+    temperatureC += calibrationOffset[patient];
+
+    return temperatureC;
+}
+
+// =====================================
+// Health Status
+// =====================================
+
+String getHealthStatus(float temp)
+{
+    if (temp < 35.0)
+    {
+        return "LOW";
+    }
+    else if (temp < 37.5)
+    {
+        return "NORMAL";
+    }
+    else if (temp < 38.5)
+    {
+        return "MILD FEVER";
+    }
+    else if (temp < 39.5)
+    {
+        return "HIGH FEVER";
+    }
+    else
+    {
+        return "CRITICAL";
+    }
+}
+
+// =====================================
+// Main Dashboard
+// =====================================
+
+void handleRoot()
+{
+    String html = "";
+
+    html += "<!DOCTYPE html>";
+    html += "<html>";
+
+    html += "<head>";
+
+    html +=
+    "<meta http-equiv='refresh' content='5'>";
+
+    html +=
+    "<title>Medical Monitoring</title>";
+
+    html += "<style>";
+
+    html += "body{";
+    html += "background:#0f172a;";
+    html += "font-family:Arial;";
+    html += "padding:20px;";
+    html += "color:white;";
+    html += "}";
+
+    html += "h1{";
+    html += "text-align:center;";
+    html += "}";
+
+    html += "table{";
+    html += "width:100%;";
+    html += "border-collapse:collapse;";
+    html += "}";
+
+    html += "th{";
+    html += "background:#1e293b;";
+    html += "padding:15px;";
+    html += "border:1px solid #334155;";
+    html += "}";
+
+    html += "td{";
+    html += "padding:15px;";
+    html += "text-align:center;";
+    html += "background:#111827;";
+    html += "border:1px solid #334155;";
+    html += "}";
+
+    html += "a{";
+    html += "padding:10px 20px;";
+    html += "background:#22c55e;";
+    html += "color:white;";
+    html += "text-decoration:none;";
+    html += "border-radius:10px;";
+    html += "margin:10px;";
+    html += "display:inline-block;";
+    html += "}";
+
+    html += "input{";
+    html += "padding:6px;";
+    html += "border-radius:6px;";
+    html += "border:none;";
+    html += "}";
+
+    html += "</style>";
+
+    html += "</head>";
+
+    html += "<body>";
+
+    html +=
+    "<h1>10 Patient Monitoring System</h1>";
+
+    html += "<table>";
+
+    html += "<tr>";
+
+    html += "<th>Patient</th>";
+    html += "<th>Temp °C</th>";
+    html += "<th>Temp °F</th>";
+    html += "<th>Status</th>";
+    html += "<th>Edit</th>";
+
+    html += "</tr>";
+
+    for (int i = 0; i < TOTAL_PATIENTS; i++)
+    {
+        html += "<tr>";
+
+        html += "<td>";
+        html += patientNames[i];
+        html += "</td>";
+
+        html += "<td>";
+        html += String(patientTempC[i], 2);
+        html += "</td>";
+
+        html += "<td>";
+        html += String(patientTempF[i], 2);
+        html += "</td>";
+
+        html += "<td>";
+        html += patientStatus[i];
+        html += "</td>";
+
+        html += "<td>";
+
+        html +=
+        "<form action='/edit'>";
+
+        html +=
+        "<input type='hidden' name='id' value='";
+
+        html += String(i);
+
+        html += "'>";
+
+        html +=
+        "<input name='name' placeholder='Name'>";
+
+        html +=
+        "<input name='offset' placeholder='Offset'>";
+
+        html +=
+        "<input type='submit' value='Save'>";
+
+        html += "</form>";
+
+        html += "</td>";
+
+        html += "</tr>";
+    }
+
+    html += "</table>";
+
+    html += "<br>";
+
+    html +=
+    "<a href='/download'>Download CSV</a>";
+
+    html += "</body>";
+
+    html += "</html>";
+
+    server.send(200, "text/html", html);
+}
+
+// =====================================
+// Edit Patient Data
+// =====================================
+
+void handleEdit()
+{
+    if (server.hasArg("id"))
+    {
+        int id =
+            server.arg("id").toInt();
+
+        if (id >= 0 &&
+            id < TOTAL_PATIENTS)
+        {
+            // Change Name
+            if (server.hasArg("name"))
+            {
+                String newName =
+                    server.arg("name");
+
+                if (newName.length() > 0)
+                {
+                    patientNames[id] =
+                        newName;
+                }
+            }
+
+            // Change Calibration
+            if (server.hasArg("offset"))
+            {
+                String offsetValue =
+                    server.arg("offset");
+
+                if (offsetValue.length() > 0)
+                {
+                    calibrationOffset[id] =
+                        offsetValue.toFloat();
+                }
+            }
+        }
+    }
+
+    server.sendHeader("Location", "/");
+
+    server.send(303);
+}
+
+// =====================================
+// CSV Download
+// =====================================
+
+void handleCSV()
+{
+    server.sendHeader(
+        "Content-Disposition",
+        "attachment; filename=medical_logs.csv"
+    );
+
+    server.send(
+        200,
+        "text/csv",
+        csvData
+    );
+}

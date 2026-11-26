@@ -1,0 +1,490 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import WaveformCanvas from "./components/WaveformCanvas";
+import PPGAnalysisCanvas from "./components/PPGAnalysisCanvas";
+import VitalSign from "./components/VitalSign";
+import MonitorHeader from "./components/MonitorHeader";
+import {
+  generatePPGBuffer,
+  generateECGBuffer,
+  generateRespBuffer,
+  PPGPoint,
+} from "./utils/ppgSignal";
+
+// ── Simulation settings ──────────────────────────────────────────────────────
+const SAMPLE_RATE = 100; // samples/sec (MAX30102 up to 3200 sps; 100 for display)
+const BUFFER_SECONDS = 30; // rolling buffer
+const TIME_WINDOW = 10; // seconds shown on screen
+const UPDATE_HZ = 30; // render FPS
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function clamp(v: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function useWindowSize() {
+  const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
+  useEffect(() => {
+    const handler = () => setSize({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return size;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const { w, h } = useWindowSize();
+
+  // Vital-sign state (slowly drifting to simulate live patient)
+  const [hr, setHr] = useState(78);
+  const [spo2, setSpo2] = useState(98);
+  const [rr, setRr] = useState(16);
+  const [nbpSys, setNbpSys] = useState(121);
+  const [nbpDia, setNbpDia] = useState(81);
+  const [temp] = useState(37.2);
+  const [pulse, setPulse] = useState(79);
+
+  // RI metrics
+  const [riav, setRiav] = useState(14.2);
+  const [riiv, setRiiv] = useState(11.1);
+  const [rifv, setRifv] = useState(2.8);
+
+  // Waveform rolling buffers
+  const ppgBuffer = useRef<PPGPoint[]>([]);
+  const ecgBuffer = useRef<PPGPoint[]>([]);
+  const respBuffer = useRef<PPGPoint[]>([]);
+  const currentTime = useRef(0);
+
+  // Display snapshots (state) updated at render FPS
+  const [ppgSnap, setPpgSnap] = useState<PPGPoint[]>([]);
+  const [ecgSnap, setEcgSnap] = useState<PPGPoint[]>([]);
+  const [respSnap, setRespSnap] = useState<PPGPoint[]>([]);
+  const [timesnap, setTimesnap] = useState(0);
+
+  // NBP history
+  const [nbpHistory, setNbpHistory] = useState([
+    { t: "10:30", sys: 122, dia: 81, map: 90 },
+    { t: "10:40", sys: 121, dia: 81, map: 89 },
+    { t: "10:48", sys: 120, dia: 82, map: 90 },
+    { t: "10:50", sys: 121, dia: 80, map: 89 },
+    { t: "10:51", sys: 122, dia: 80, map: 89 },
+  ]);
+
+  // Generate initial signal data
+  const generateChunk = useCallback(
+    (startTime: number, durationSec: number, hrNow: number, rrNow: number) => {
+      const newPPG = generatePPGBuffer(durationSec, SAMPLE_RATE, hrNow, rrNow);
+      const newECG = generateECGBuffer(durationSec, SAMPLE_RATE, hrNow);
+      const newResp = generateRespBuffer(durationSec, SAMPLE_RATE, rrNow);
+
+      const offset = startTime;
+      return {
+        ppg: newPPG.map((p) => ({ ...p, time: p.time + offset })),
+        ecg: newECG.map((p) => ({ ...p, time: p.time + offset })),
+        resp: newResp.map((p) => ({ ...p, time: p.time + offset })),
+      };
+    },
+    []
+  );
+
+  // Pre-fill buffer on mount
+  useEffect(() => {
+    const chunk = generateChunk(0, BUFFER_SECONDS, 78, 16);
+    ppgBuffer.current = chunk.ppg;
+    ecgBuffer.current = chunk.ecg;
+    respBuffer.current = chunk.resp;
+    currentTime.current = TIME_WINDOW;
+  }, [generateChunk]);
+
+  // Simulation loop: advance time and extend buffers
+  useEffect(() => {
+    let lastTs: number | null = null;
+    let rafId: number;
+
+    const tick = (ts: number) => {
+      if (lastTs === null) lastTs = ts;
+      const elapsed = (ts - lastTs) / 1000;
+      lastTs = ts;
+
+      currentTime.current += elapsed;
+      const t = currentTime.current;
+
+      // Trim old data beyond BUFFER_SECONDS
+      const cutoff = t - BUFFER_SECONDS;
+      ppgBuffer.current = ppgBuffer.current.filter((p) => p.time >= cutoff);
+      ecgBuffer.current = ecgBuffer.current.filter((p) => p.time >= cutoff);
+      respBuffer.current = respBuffer.current.filter((p) => p.time >= cutoff);
+
+      // Extend buffer if needed (keep 5s ahead)
+      const bufEnd =
+        ppgBuffer.current.length > 0
+          ? ppgBuffer.current[ppgBuffer.current.length - 1].time
+          : 0;
+      if (bufEnd < t + 5) {
+        const extStart = bufEnd;
+        const extDur = 5;
+        const chunk = generateChunk(extStart, extDur, hr, rr);
+        ppgBuffer.current = [...ppgBuffer.current, ...chunk.ppg];
+        ecgBuffer.current = [...ecgBuffer.current, ...chunk.ecg];
+        respBuffer.current = [...respBuffer.current, ...chunk.resp];
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [hr, rr, generateChunk]);
+
+  // Render loop at UPDATE_HZ
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const t = currentTime.current;
+      const startT = t - TIME_WINDOW;
+
+      setPpgSnap(ppgBuffer.current.filter((p) => p.time >= startT && p.time <= t));
+      setEcgSnap(ecgBuffer.current.filter((p) => p.time >= startT && p.time <= t));
+      setRespSnap(respBuffer.current.filter((p) => p.time >= startT && p.time <= t));
+      setTimesnap(t);
+    }, 1000 / UPDATE_HZ);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Slowly drift vital signs every 5s to simulate live patient
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHr((v) => clamp(v + (Math.random() - 0.5) * 2, 55, 110));
+      setSpo2((v) => clamp(v + (Math.random() - 0.5) * 0.5, 94, 100));
+      setRr((v) => clamp(v + (Math.random() - 0.5) * 0.8, 10, 25));
+      setPulse((v) => clamp(v + (Math.random() - 0.5) * 2, 55, 110));
+      setRiav((v) => clamp(v + (Math.random() - 0.5) * 0.5, 5, 30));
+      setRiiv((v) => clamp(v + (Math.random() - 0.5) * 0.4, 4, 25));
+      setRifv((v) => clamp(v + (Math.random() - 0.5) * 0.15, 1, 8));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update NBP every 10 min (simulated: every 30s for demo)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const t = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+      const sys = clamp(nbpSys + Math.round((Math.random() - 0.5) * 6), 100, 160);
+      const dia = clamp(nbpDia + Math.round((Math.random() - 0.5) * 4), 60, 100);
+      const map = Math.round(dia + (sys - dia) / 3);
+      setNbpSys(sys);
+      setNbpDia(dia);
+      setNbpHistory((h) => [...h.slice(-4), { t, sys, dia, map }]);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [nbpSys, nbpDia]);
+
+  // Layout dimensions
+  const headerH = 32;
+  const footerH = 0;
+  const contentH = h - headerH - footerH;
+  const leftW = Math.floor(w * 0.68);
+  const rightW = w - leftW;
+
+  // Waveform panel heights: ECG | PPG (Pleth) | Resp | PPG Analysis
+  const waveAreaH = contentH;
+  const ecgH = Math.floor(waveAreaH * 0.22);
+  const plethH = Math.floor(waveAreaH * 0.22);
+  const respH = Math.floor(waveAreaH * 0.18);
+  const analysisH = waveAreaH - ecgH - plethH - respH;
+
+  const nbpMap = Math.round(nbpDia + (nbpSys - nbpDia) / 3);
+
+  return (
+    <div
+      className="flex flex-col overflow-hidden select-none"
+      style={{
+        width: w,
+        height: h,
+        background: "#000",
+        fontFamily: "'Courier New', monospace",
+      }}
+    >
+      {/* ── HEADER ── */}
+      <MonitorHeader
+        bedNumber="3"
+        patientName="Doe, John"
+        patientType="Adult"
+        waveCount="4 Waves"
+      />
+
+      {/* ── MAIN CONTENT ── */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* ── LEFT: WAVEFORMS ── */}
+        <div
+          className="flex flex-col"
+          style={{ width: leftW, borderRight: "1px solid #222" }}
+        >
+          {/* ECG */}
+          <div style={{ height: ecgH, position: "relative", borderBottom: "1px solid #111" }}>
+            <div
+              className="absolute top-1 left-2 text-xs font-bold z-10"
+              style={{ color: "#00ff44" }}
+            >
+              II
+            </div>
+            <WaveformCanvas
+              data={ecgSnap}
+              color="#00ff44"
+              label=""
+              width={leftW}
+              height={ecgH}
+              minVal={-0.4}
+              maxVal={1.3}
+              timeWindow={TIME_WINDOW}
+              currentTime={timesnap}
+            />
+          </div>
+
+          {/* Pleth (PPG) */}
+          <div style={{ height: plethH, position: "relative", borderBottom: "1px solid #111" }}>
+            <div
+              className="absolute top-1 left-2 text-xs font-bold z-10"
+              style={{ color: "#00ccff" }}
+            >
+              Pleth
+            </div>
+            <WaveformCanvas
+              data={ppgSnap}
+              color="#00ccff"
+              label=""
+              width={leftW}
+              height={plethH}
+              minVal={-12}
+              maxVal={12}
+              timeWindow={TIME_WINDOW}
+              currentTime={timesnap}
+            />
+          </div>
+
+          {/* Resp */}
+          <div style={{ height: respH, position: "relative", borderBottom: "1px solid #111" }}>
+            <div
+              className="absolute top-1 left-2 text-xs font-bold z-10"
+              style={{ color: "#ffdd00" }}
+            >
+              Resp
+            </div>
+            <WaveformCanvas
+              data={respSnap}
+              color="#ffdd00"
+              label=""
+              width={leftW}
+              height={respH}
+              minVal={-1.2}
+              maxVal={1.2}
+              timeWindow={TIME_WINDOW}
+              currentTime={timesnap}
+            />
+          </div>
+
+          {/* PPG Analysis (RIAV / RIIV / RIFV) */}
+          <div
+            style={{
+              height: analysisH,
+              position: "relative",
+              background: "#050505",
+            }}
+          >
+            <div
+              className="absolute top-1 left-2 text-xs font-bold z-10"
+              style={{ color: "#8888ff" }}
+            >
+              PPG Analysis — MAX30102
+            </div>
+            <PPGAnalysisCanvas
+              data={ppgSnap}
+              width={leftW}
+              height={analysisH}
+              hr={hr}
+              rr={rr}
+              currentTime={timesnap}
+              timeWindow={TIME_WINDOW}
+            />
+          </div>
+        </div>
+
+        {/* ── RIGHT: VITAL SIGNS PANEL ── */}
+        <div
+          className="flex flex-col gap-0 overflow-hidden"
+          style={{ width: rightW, background: "#000" }}
+        >
+          {/* HR */}
+          <div
+            className="flex flex-col px-3 py-2"
+            style={{ borderBottom: "1px solid #1a1a1a", minHeight: Math.floor(contentH * 0.22) }}
+          >
+            <VitalSign
+              label="HR"
+              value={Math.round(hr)}
+              unit="bpm"
+              color="#00ff44"
+              subValues={[{ label: "hi", value: 120 }, { label: "lo", value: 50 }]}
+              source="MAX30102"
+            />
+            <div className="mt-1">
+              <VitalSign
+                label="Pulse"
+                value={Math.round(pulse)}
+                color="#00ff44"
+              />
+            </div>
+          </div>
+
+          {/* SpO2 */}
+          <div
+            className="flex flex-col px-3 py-2"
+            style={{ borderBottom: "1px solid #1a1a1a", minHeight: Math.floor(contentH * 0.22) }}
+          >
+            <VitalSign
+              label="SpO₂"
+              value={Math.round(spo2)}
+              unit="%"
+              color="#00ccff"
+              subValues={[{ label: "hi", value: 100 }, { label: "lo", value: 90 }]}
+              source="MAX30102"
+            />
+            {/* Perfusion index */}
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-xs" style={{ color: "#00ccff", opacity: 0.6 }}>
+                PI
+              </span>
+              <span className="text-sm font-bold font-mono" style={{ color: "#00ccff" }}>
+                {(2.1 + Math.random() * 0.3).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+
+          {/* RR */}
+          <div
+            className="flex flex-col px-3 py-2"
+            style={{ borderBottom: "1px solid #1a1a1a", minHeight: Math.floor(contentH * 0.18) }}
+          >
+            <VitalSign
+              label="RR"
+              value={Math.round(rr)}
+              unit="rpm"
+              color="#ffdd00"
+              subValues={[{ label: "hi", value: 30 }, { label: "lo", value: 8 }]}
+            />
+          </div>
+
+          {/* RI Metrics (RIAV / RIIV / RIFV) */}
+          <div
+            className="flex flex-col px-3 py-2 gap-1"
+            style={{ borderBottom: "1px solid #1a1a1a" }}
+          >
+            <div className="text-xs font-bold tracking-widest mb-1" style={{ color: "#8888ff", opacity: 0.8 }}>
+              RI METRICS
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold" style={{ color: "#ff3333" }}>RIAV</span>
+              <span className="text-lg font-bold font-mono" style={{ color: "#ff3333", textShadow: "0 0 10px #ff333366" }}>
+                {riav.toFixed(1)}
+                <span className="text-xs ml-1" style={{ opacity: 0.6 }}>%</span>
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold" style={{ color: "#00dd44" }}>RIIV</span>
+              <span className="text-lg font-bold font-mono" style={{ color: "#00dd44", textShadow: "0 0 10px #00dd4466" }}>
+                {riiv.toFixed(1)}
+                <span className="text-xs ml-1" style={{ opacity: 0.6 }}>%</span>
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold" style={{ color: "#ff8800" }}>RIFV</span>
+              <span className="text-lg font-bold font-mono" style={{ color: "#ff8800", textShadow: "0 0 10px #ff880066" }}>
+                {rifv.toFixed(2)}
+                <span className="text-xs ml-1" style={{ opacity: 0.6 }}>Hz</span>
+              </span>
+            </div>
+            {/* IBI */}
+            <div className="flex justify-between items-center mt-1 pt-1" style={{ borderTop: "1px solid #1a1a1a" }}>
+              <span className="text-xs font-bold" style={{ color: "#aaaaaa" }}>IBI</span>
+              <span className="text-sm font-bold font-mono" style={{ color: "#aaaaaa" }}>
+                {Math.round(60000 / hr)}
+                <span className="text-xs ml-1" style={{ opacity: 0.6 }}>ms</span>
+              </span>
+            </div>
+          </div>
+
+          {/* NBP */}
+          <div
+            className="flex flex-col px-3 py-2"
+            style={{ borderBottom: "1px solid #1a1a1a" }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold tracking-widest" style={{ color: "#ff3333", opacity: 0.8 }}>
+                BP
+              </span>
+              <span className="text-xs" style={{ color: "#ff3333", opacity: 0.5 }}>
+                Auto 10 min
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span
+                className="text-3xl font-bold font-mono"
+                style={{ color: "#ff3333", textShadow: "0 0 15px #ff333366" }}
+              >
+                {nbpSys}/{nbpDia}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs" style={{ color: "#ff3333", opacity: 0.7 }}>MAP</span>
+              <span className="text-xl font-bold font-mono" style={{ color: "#ff3333" }}>
+                ({nbpMap})
+              </span>
+            </div>
+            {/* History */}
+            <div className="mt-1 flex flex-col gap-0.5">
+              {nbpHistory.slice(-4).map((h, i) => (
+                <div key={i} className="flex gap-2 text-xs" style={{ color: "#ff3333", opacity: 0.5 }}>
+                  <span>{h.t}</span>
+                  <span>{h.sys}/{h.dia} ({h.map})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Temp */}
+          <div className="flex flex-col px-3 py-2">
+            <VitalSign
+              label="Temp"
+              value={temp.toFixed(1)}
+              unit="°C"
+              color="#00ff88"
+              subValues={[
+                { label: "hi", value: "40.1" },
+                { label: "lo", value: "36.9" },
+              ]}
+            />
+          </div>
+
+          {/* MAX30102 Sensor Info */}
+          <div
+            className="mt-auto mx-3 mb-2 px-2 py-2 rounded text-xs"
+            style={{
+              background: "#0a0a14",
+              border: "1px solid #223",
+              color: "#556",
+            }}
+          >
+            <div className="font-bold mb-1" style={{ color: "#8888aa" }}>
+              MAX30102 Sensor
+            </div>
+            <div>Mode: HR + SpO₂</div>
+            <div>LED: 660nm / 880nm</div>
+            <div>Sample: {SAMPLE_RATE} sps</div>
+            <div>Res: 18-bit ADC</div>
+            <div>I²C: 0x57</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
