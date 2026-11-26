@@ -1,0 +1,185 @@
+// MAX30102 PPG Signal Simulation
+// Simulates realistic PPG (photoplethysmography) waveform as produced by MAX30102
+
+export interface PPGPoint {
+  time: number;
+  value: number;
+}
+
+export interface VitalSigns {
+  hr: number;
+  spo2: number;
+  rr: number;
+  riav: number; // Respiratory-induced amplitude variation
+  riiv: number; // Respiratory-induced intensity variation
+  rifv: number; // Respiratory-induced frequency variation
+}
+
+// Generate a single PPG pulse shape (normalized 0-1)
+function ppgPulse(t: number, duration: number): number {
+  const x = t / duration;
+  if (x < 0 || x > 1) return 0;
+
+  // Realistic PPG morphology: systolic peak + dicrotic notch + diastolic peak
+  const systolic = Math.exp(-Math.pow((x - 0.15) / 0.08, 2));
+  const dicroticNotch = -0.15 * Math.exp(-Math.pow((x - 0.35) / 0.04, 2));
+  const diastolic = 0.35 * Math.exp(-Math.pow((x - 0.5) / 0.12, 2));
+  const baseline = Math.exp(-x * 3.5) * 0.1;
+
+  return systolic + dicroticNotch + diastolic + baseline;
+}
+
+// Generate full PPG waveform buffer
+export function generatePPGBuffer(
+  lengthSeconds: number,
+  sampleRate: number,
+  hr: number,
+  breathingRate: number,
+  riavDepth: number = 0.15,
+  riivDepth: number = 0.12,
+  rifvDepth: number = 0.03
+): PPGPoint[] {
+  const totalSamples = Math.floor(lengthSeconds * sampleRate);
+  const data: PPGPoint[] = [];
+  const beatPeriod = 60 / hr;
+  const breathPeriod = 60 / breathingRate;
+
+  for (let i = 0; i < totalSamples; i++) {
+    const t = i / sampleRate;
+
+    // Respiratory modulation
+    const respPhase = (2 * Math.PI * t) / breathPeriod;
+    const respSin = Math.sin(respPhase);
+
+    // RIFV: frequency variation (beat period varies with respiration)
+    const effectiveBeatPeriod = beatPeriod * (1 + rifvDepth * respSin);
+
+    // Find position within current beat
+    const beatPhase = (t % effectiveBeatPeriod) / effectiveBeatPeriod;
+    const beatT = beatPhase * effectiveBeatPeriod;
+
+    // Base PPG pulse
+    let pulse = ppgPulse(beatT, effectiveBeatPeriod * 0.85);
+
+    // RIAV: amplitude variation (tidal breathing effect)
+    const riavFactor = 1 + riavDepth * respSin;
+    pulse *= riavFactor;
+
+    // RIIV: intensity variation (DC baseline shift)
+    const riivOffset = riivDepth * respSin;
+    pulse += riivOffset;
+
+    // Add realistic sensor noise (MAX30102 has low noise floor)
+    const noise = (Math.random() - 0.5) * 0.008;
+
+    // Scale to amplitude range [-10, 10] for display
+    const value = pulse * 14 - 2 + noise;
+
+    data.push({ time: t, value });
+  }
+
+  return data;
+}
+
+// Generate ECG-like waveform (derived/estimated from PPG timing)
+export function generateECGBuffer(
+  lengthSeconds: number,
+  sampleRate: number,
+  hr: number
+): PPGPoint[] {
+  const totalSamples = Math.floor(lengthSeconds * sampleRate);
+  const data: PPGPoint[] = [];
+  const beatPeriod = 60 / hr;
+
+  for (let i = 0; i < totalSamples; i++) {
+    const t = i / sampleRate;
+    const tInBeat = t % beatPeriod;
+    const x = tInBeat / beatPeriod;
+
+    let value = 0;
+    // P wave
+    value += 0.25 * Math.exp(-Math.pow((x - 0.1) / 0.03, 2));
+    // Q wave
+    value -= 0.1 * Math.exp(-Math.pow((x - 0.18) / 0.01, 2));
+    // R peak
+    value += 1.0 * Math.exp(-Math.pow((x - 0.2) / 0.012, 2));
+    // S wave
+    value -= 0.25 * Math.exp(-Math.pow((x - 0.225) / 0.01, 2));
+    // T wave
+    value += 0.35 * Math.exp(-Math.pow((x - 0.38) / 0.05, 2));
+
+    const noise = (Math.random() - 0.5) * 0.015;
+    data.push({ time: t, value: value + noise });
+  }
+
+  return data;
+}
+
+// Generate respiratory waveform
+export function generateRespBuffer(
+  lengthSeconds: number,
+  sampleRate: number,
+  rr: number
+): PPGPoint[] {
+  const totalSamples = Math.floor(lengthSeconds * sampleRate);
+  const data: PPGPoint[] = [];
+  const breathPeriod = 60 / rr;
+
+  for (let i = 0; i < totalSamples; i++) {
+    const t = i / sampleRate;
+    const x = t % breathPeriod;
+    const phase = (2 * Math.PI * x) / breathPeriod;
+
+    // Realistic breathing waveform (slightly asymmetric inhale/exhale)
+    const inhale = Math.max(0, Math.sin(phase));
+    const exhale = Math.min(0, Math.sin(phase)) * 0.7;
+    const value = (inhale + exhale) * 0.8;
+
+    const noise = (Math.random() - 0.5) * 0.02;
+    data.push({ time: t, value: value + noise });
+  }
+
+  return data;
+}
+
+// Calculate RIAV, RIIV, RIFV from PPG buffer
+export function calculateRIMetrics(
+  ppgBuffer: PPGPoint[],
+  hr: number,
+  rr: number
+): { riav: number; riiv: number; rifv: number } {
+  // Simplified calculation for display purposes
+  const beatPeriod = 60 / hr;
+  const breathPeriod = 60 / rr;
+  const beatsPerBreath = breathPeriod / beatPeriod;
+
+  // Find peaks per respiratory cycle and measure amplitude variation
+  const peaks: number[] = [];
+  const sampleRate = 100;
+  const window = Math.floor(beatsPerBreath * beatPeriod * sampleRate);
+
+  for (let i = 1; i < Math.min(ppgBuffer.length - 1, window * 3); i++) {
+    const prev = ppgBuffer[i - 1].value;
+    const curr = ppgBuffer[i].value;
+    const next = ppgBuffer[i + 1].value;
+    if (curr > prev && curr > next && curr > 5) {
+      peaks.push(curr);
+    }
+  }
+
+  if (peaks.length < 2) {
+    return { riav: 0.15, riiv: 0.12, rifv: 0.03 };
+  }
+
+  const maxAmp = Math.max(...peaks);
+  const minAmp = Math.min(...peaks);
+  const riav = ((maxAmp - minAmp) / (maxAmp + minAmp)) * 100;
+  const riiv = riav * 0.8;
+  const rifv = riav * 0.2;
+
+  return {
+    riav: Math.round(riav * 10) / 10,
+    riiv: Math.round(riiv * 10) / 10,
+    rifv: Math.round(rifv * 10) / 10,
+  };
+}

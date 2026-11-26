@@ -1,0 +1,198 @@
+KICAD 10.0.4 - SHORTCUTS AND ACTIONS REFERENCE
+====================================================================
+Windows/Linux default PC-keyboard notation.
+Important: KiCad allows custom hotkeys. Ctrl+F1 shows the actual list in your installation.
+The official online 10.0 manual currently states it is based on KiCad 10.0.5, so use Ctrl+F1 for exact 10.0.4 local confirmation.
+
+
+PROJECT MANAGER
+---------------
+Ctrl+N                   | New Project                                | Create a new project
+Ctrl+T                   | New Project from Template                  | Create a project from a template
+Ctrl+O                   | Open Project                               | Open an existing project
+Ctrl+E                   | Schematic Editor                           | Open/edit schematic
+Ctrl+L                   | Symbol Editor                              | Open/edit symbols
+Ctrl+P                   | PCB Editor                                 | Open/edit PCB
+Ctrl+F                   | Footprint Editor                           | Open/edit footprints
+Ctrl+G                   | Gerber Viewer                              | View Gerber outputs
+Ctrl+B                   | Image Converter                            | Convert bitmap images to schematic/PCB components
+Ctrl+Y                   | Drawing Sheet Editor                       | Edit drawing sheet and title block
+Ctrl+M                   | Plugin and Content Manager                 | Manage KiCad/third-party packages
+
+COMMON
+------
+Ctrl+W                   | Close                                      | Close the current editor/window
+Ctrl+Q                   | Quit                                       | Quit KiCad/editor
+Ctrl+F1                  | List Hotkeys                               | Show current hotkey table and assignable commands
+Ctrl+,                   | Preferences                                | Show preferences
+Ctrl+S                   | Save                                       | Save changes
+Ctrl+Shift+S             | Save As                                    | Save current document to another location
+Ctrl+N                   | New                                        | Create a new document
+Ctrl+O                   | Open                                       | Open an existing document
+Ctrl+P                   | Print                                      | Print current document
+Ctrl+Z                   | Undo                                       | Undo last edit
+Ctrl+Y                   | Redo                                       | Redo last undone edit
+Ctrl+C                   | Copy                                       | Copy selected items
+Ctrl+Shift+C             | Copy as Text                               | Copy selected items as text
+Ctrl+X                   | Cut                                        | Cut selected items
+Ctrl+V                   | Paste                                      | Paste clipboard items
+Ctrl+Shift+V             | Paste Special                              | Paste with options
+Ctrl+D                   | Duplicate                                  | Duplicate selected items
+Del                      | Delete                                     | Delete selected items
+Ctrl+F                   | Find                                       | Find items/text
+Ctrl+Alt+F               | Find and Replace                           | Find and replace
+F3                       | Find Next                                  | Find next match
+Shift+F3                 | Find Previous                              | Find previous match
+Ctrl+Shift+F3            | Find Next Marker                           | Go to next checker marker
+Ctrl+G                   | Search Panel                               | Show/hide search panel
+Ctrl+A                   | Select All                                 | Select all items on screen
+Ctrl+Shift+A             | Unselect All                               | Clear selection
+Ctrl+Shift+M             | Measure Tool                               | Measure distance between points
+F1                       | Zoom In at Cursor                          | Zoom in at cursor
+F2                       | Zoom Out at Cursor                         | Zoom out at cursor
+F4                       | Center on Cursor                           | Center the view on cursor
+F5                       | Refresh                                    | Refresh/redraw view
+Ctrl+F5                  | Zoom to Selection Area                     | Zoom to a dragged area
+Home                     | Zoom to Fit                                | Fit worksheet/objects
+Ctrl+Home                | Zoom to All Objects                        | Fit all objects
+Space                    | Reset Local Coordinates                    | Reset relative coordinate origin
+Up                       | Cursor Up                                  | Move cursor one grid step up
+Down                     | Cursor Down                                | Move cursor one grid step down
+Left                     | Cursor Left                                | Move cursor one grid step left
+Right                    | Cursor Right                               | Move cursor one grid step right
+Ctrl+Up                  | Cursor Up Fast                             | Move cursor faster up
+Ctrl+Down                | Cursor Down Fast                           | Move cursor faster down
+Ctrl+Left                | Cursor Left Fast                           | Move cursor faster left
+Ctrl+Right               | Cursor Right Fast                          | Move cursor faster right
+Shift+Up                 | Pan Up                                     | Pan view upward
+Shift+Down               | Pan Down                                   | Pan view downward
+Shift+Left               | Pan Left                                   | Pan view left
+Shift+Right              | Pan Right                                  | Pan view right
+Alt+1                    | Fast Grid 1                                | Switch to fast grid 1
+Alt+2                    | Fast Grid 2                                | Switch to fast grid 2
+Alt+4                    | Cycle Fast Grid                            | Cycle fast grids
+N                        | Next Grid                                  | Switch to next grid
+Shift+N                  | Previous Grid                              | Switch to previous grid
+H                        | Inactive Layer View 3-state                | Cycle normal/dim/hidden
+Shift+S                  | Toggle Snapping Layer Scope                | Toggle active/all visible layer snapping
+Ctrl+U                   | Units                                      | Switch metric/imperial units
+Ctrl+Shift+G             | Grid Overrides                             | Enable item-specific grid overrides
+Alt+3                    | 3D Viewer                                  | Open 3D Viewer
+D                        | Show Datasheet                             | Open selected component datasheet
+End                      | Finish                                     | Finish current tool/operation
+
+SCHEMATIC EDITOR
+----------------
+~                        | Clear Net Highlighting                     | Clear existing net highlighting
+Ctrl+Shift+E             | Edit Library Symbol                        | Open library symbol in Symbol Editor
+Ctrl+E                   | Edit with Symbol Editor                    | Open selected symbol in Symbol Editor
+`                        | Highlight Net                              | Highlight net under cursor
+Ctrl+Shift+F             | Import Graphics                            | Import a 2D drawing file
+Shift+Space              | Line Mode - Next Angle                     | Cycle wire/bus angle snapping mode
+Tab                      | Next Net Item                              | Select next item on current net
+Shift+Tab                | Previous Net Item                          | Select previous item on current net
+S                        | Draw Hierarchical Sheets                   | Place hierarchical sheet
+Z                        | Wire to Bus Entry                          | Place wire-to-bus entry
+Shift+B                  | Place Design Block                         | Add selected design block to sheet
+Ctrl+L                   | Place Global Label                         | Place global label
+H                        | Place Hierarchical Label                   | Place hierarchical label
+J                        | Place Junction                             | Place junction
+L                        | Place Net Label                            | Place local net label
+Q                        | Place No-Connect Flag                      | Place no-connect flag
+P                        | Place Power Symbol                         | Place power symbol
+T                        | Draw Text                                  | Place text
+A                        | Place Symbol                               | Place schematic symbol
+B                        | Draw Bus                                   | Draw bus
+I                        | Draw Line                                  | Draw graphic line
+W                        | Draw Wire                                  | Draw wire
+/                        | Switch Segment Posture                     | Change current segment posture
+Backspace                | Undo Last Segment                          | Walk back one drawn segment
+C                        | Unfold from Bus                            | Break a wire out of a bus
+O                        | Autoplace Fields                           | Run automatic field placement
+F                        | Edit Footprint                             | Edit footprint assignment
+U                        | Edit Reference Designator                  | Edit symbol reference
+V                        | Edit Value                                 | Edit symbol value
+X                        | Mirror Horizontally                        | Flip selected items left/right
+Y                        | Mirror Vertically                          | Flip selected items top/bottom
+E                        | Properties                                 | Edit selected item properties
+Ins                      | Repeat Last Item                           | Repeat/duplicate last placed item
+R                        | Rotate Counterclockwise                    | Rotate selected item counterclockwise
+Shift+R                  | Rotate Clockwise                           | Rotate selected item clockwise
+Alt+S                    | Swap                                       | Swap selected item positions
+PgDn                     | Next Sheet                                 | Move to next sheet
+PgUp                     | Previous Sheet                             | Move to previous sheet
+Alt+Left                 | Navigate Back                              | Go backward in sheet navigation history
+Alt+Right                | Navigate Forward                           | Go forward in sheet navigation history
+Alt+Backspace            | Leave Sheet                                | Display parent sheet
+Alt+Up                   | Navigate Up                                | Navigate up one hierarchy level
+Ctrl+N                   | New Analysis Tab                           | Create a simulator analysis tab
+Ctrl+O                   | Open Workbook                              | Open saved simulator workbook
+Shift+P                  | Probe Schematic                            | Add simulator probe
+R                        | Run Simulation                             | Run simulation
+Ctrl+S                   | Save Workbook                              | Save simulator workbook
+Ctrl+Shift+S             | Save Workbook As                           | Save simulator workbook elsewhere
+Shift+T                  | Add Tuned Value                            | Select a simulator value to tune
+F8                       | Update PCB from Schematic                  | Push schematic changes to PCB
+
+PCB EDITOR
+----------
+Ctrl+T                   | Create Array                               | Create an item/footprint array
+Ctrl++                   | Switch Track to Next Layer                 | Switch routed track to next enabled copper layer
+Ctrl+-                   | Switch Track to Previous Layer             | Switch routed track to previous enabled copper layer
+{                        | Decrease Layer Opacity                     | Make current layer more transparent
+}                        | Increase Layer Opacity                     | Make current layer less transparent
+PgDn                     | B.Cu                                       | Switch to back copper layer
+B                        | Fill All Zones                             | Update all copper zone fills
+Ctrl+B                   | Unfill All Zones                           | Remove all copper zone fills
+4                        | Decrease Tuning Amplitude                  | Decrease tuning pattern amplitude
+3                        | Increase Tuning Amplitude                  | Increase tuning pattern amplitude
+2                        | Decrease Tuning Spacing                    | Decrease tuning pattern spacing
+1                        | Increase Tuning Spacing                    | Increase tuning pattern spacing
+F8                       | Update PCB from Schematic                  | Update PCB from schematic
+
+3D VIEWER
+---------
+D                        | Show DNP 3D Models                         | Show models marked Do Not Place
+P                        | Show Models not in POS File                | Show models not present in position file
+V                        | Show Unspecified 3D Models                 | Show unspecified footprint models
+S                        | Show SMD 3D Models                         | Show surface-mount models
+T                        | Show Through-Hole 3D Models                | Show through-hole models
+F                        | Flip Board                                 | Flip board view
+Home                     | Home View                                  | Return to home view/zoom
+Down                     | Move Board Down                            | Move board down
+Left                     | Move Board Left                            | Move board left
+Right                    | Move Board Right                           | Move board right
+Up                       | Move Board Up                              | Move board up
+Space                    | Set Pivot                                  | Set rotation pivot point
+Shift+R                  | Rotate Z Clockwise                         | Rotate around Z clockwise
+R                        | Rotate Z Counterclockwise                  | Rotate around Z counterclockwise
+Shift+Y                  | View Back                                  | Front/back orthogonal view: back
+Shift+Z                  | View Bottom                                | Bottom orthogonal view
+Y                        | View Front                                 | Front orthogonal view
+Shift+X                  | View Left                                  | Left orthogonal view
+X                        | View Right                                 | Right orthogonal view
+Z                        | View Top                                   | Top orthogonal view
+
+DRAWING SHEET EDITOR
+--------------------
+Zoom In                  | F1                                         | Zoom in
+Zoom Out                 | F2                                         | Zoom out
+Refresh Display          | F3                                         | Refresh display
+Center Cursor            | F4                                         | Center cursor in display
+Fit in Window            | Home                                       | Fit drawing/footprint in window
+Set Relative Coordinates | Space                                      | Set relative coordinate origin
+Move Right               | Right Arrow                                | Move cursor one grid position right
+Move Left                | Left Arrow                                 | Move cursor one grid position left
+Move Up                  | Up Arrow                                   | Move cursor one grid position up
+Move Down                | Down Arrow                                 | Move cursor one grid position down
+Zoom                     | Mouse wheel                                | Zoom at cursor
+Pan horizontal           | Ctrl+Mouse wheel                           | Pan right/left
+Pan vertical             | Shift+Mouse wheel                          | Pan up/down
+Context menu             | Right click                                | Open context menu
+
+OFFICIAL SOURCES
+KiCad 10.0.4 release: https://www.kicad.org/blog/2026/06/KiCad-10.0.4-Release/
+KiCad 10.0 Reference Manual: https://docs.kicad.org/10.0/en/kicad/kicad.html
+Schematic Editor 10.0: https://docs.kicad.org/10.0/en/eeschema/eeschema.html
+PCB Editor 10.0: https://docs.kicad.org/10.0/en/pcbnew/pcbnew.html
+PCB Editor PDF: https://docs.kicad.org/10.0/en/pcbnew/pcbnew.pdf

@@ -1,0 +1,76 @@
+import React from "react";
+
+interface VitalSignProps {
+  label: string;
+  value: string | number;
+  unit?: string;
+  color: string;
+  subValues?: { label: string; value: string | number }[];
+  large?: boolean;
+  alarm?: boolean;
+  source?: string;
+}
+
+const VitalSign: React.FC<VitalSignProps> = ({
+  label,
+  value,
+  unit,
+  color,
+  subValues,
+  large = false,
+  alarm = false,
+  source,
+}) => {
+  return (
+    <div
+      className={`flex flex-col ${alarm ? "animate-pulse" : ""}`}
+      style={{ color }}
+    >
+      {/* Label */}
+      <div className="flex items-center gap-1">
+        <span
+          className="text-xs font-bold tracking-widest uppercase"
+          style={{ color, opacity: 0.85 }}
+        >
+          {label}
+        </span>
+        {source && (
+          <span className="text-xs opacity-50 ml-1" style={{ color: "#aaa" }}>
+            [{source}]
+          </span>
+        )}
+      </div>
+
+      {/* Sub-values (range) */}
+      {subValues && (
+        <div className="flex flex-col text-xs opacity-70 leading-none mb-0.5">
+          {subValues.map((sv) => (
+            <span key={sv.label}>{sv.value}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Main value */}
+      <div className="flex items-baseline gap-1">
+        <span
+          className={`font-bold font-mono leading-none ${
+            large ? "text-6xl" : "text-4xl"
+          }`}
+          style={{
+            textShadow: `0 0 20px ${color}88, 0 0 40px ${color}44`,
+            color,
+          }}
+        >
+          {value}
+        </span>
+        {unit && (
+          <span className="text-xs opacity-60" style={{ color }}>
+            {unit}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default VitalSign;

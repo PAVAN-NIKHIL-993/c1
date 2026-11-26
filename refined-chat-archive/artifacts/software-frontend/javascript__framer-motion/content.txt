@@ -1,0 +1,590 @@
+import { motion } from "framer-motion";
+
+const patients = [
+
+    {
+        name: "Ram",
+        bed: "BED-01",
+        ward: "ICU Alpha",
+        status: "Stable",
+    },
+
+    {
+        name: "Arjun",
+        bed: "BED-02",
+        ward: "ICU Beta",
+        status: "Observation",
+    },
+
+    {
+        name: "Kiran",
+        bed: "BED-03",
+        ward: "ICU Gamma",
+        status: "Critical",
+    },
+
+    {
+        name: "Neeraj",
+        bed: "BED-04",
+        ward: "ICU Delta",
+        status: "Stable",
+    },
+
+    {
+        name: "Samuel",
+        bed: "BED-05",
+        ward: "ICU Sigma",
+        status: "Observation",
+    },
+
+    {
+        name: "Pavan",
+        bed: "BED-06",
+        ward: "ICU Lambda",
+        status: "Stable",
+    },
+
+    {
+        name: "Aisha",
+        bed: "BED-07",
+        ward: "ICU Omega",
+        status: "Critical",
+    },
+
+    {
+        name: "Zara",
+        bed: "BED-08",
+        ward: "ICU Nova",
+        status: "Stable",
+    },
+
+    {
+        name: "Vijay",
+        bed: "BED-09",
+        ward: "ICU Prime",
+        status: "Observation",
+    },
+
+    {
+        name: "Krishna",
+        bed: "BED-10",
+        ward: "ICU Zenith",
+        status: "Stable",
+    },
+
+];
+
+export default function BioDashboard() {
+
+    const getStatusColor = (status: string) => {
+
+        if (status === "Critical") {
+
+            return {
+                bg: "rgba(255,77,109,0.14)",
+                text: "#ff4d6d",
+            };
+        }
+
+        if (status === "Observation") {
+
+            return {
+                bg: "rgba(255,152,0,0.14)",
+                text: "#ff9800",
+            };
+        }
+
+        return {
+            bg: "rgba(52,197,107,0.14)",
+            text: "#34C56B",
+        };
+    };
+
+    return (
+
+        <div
+            style= {{
+        minHeight: "100vh",
+
+            background:
+        "linear-gradient(to bottom right,#F4EEF7,#F7F1FF)",
+
+            padding: "40px",
+
+                fontFamily:
+        "Inter,sans-serif",
+            }
+}
+        >
+
+    {/* TOPBAR */ }
+
+    < motion.div
+
+initial = {{
+    opacity: 0,
+        y: -30,
+                }}
+
+animate = {{
+    opacity: 1,
+        y: 0,
+                }}
+
+transition = {{
+    duration: 1,
+                }}
+
+style = {{
+    marginBottom: "50px",
+
+        display: "flex",
+            justifyContent: "space-between",
+                alignItems: "center",
+                }}
+            >
+
+    <div>
+
+    <h1
+                        style={
+    {
+        fontSize: "58px",
+            color: "#7A36F0",
+                margin: 0,
+                    fontWeight: "800",
+                        }
+}
+                    >
+    VI - TRAK 637
+        </h1>
+
+        < p
+style = {{
+    color: "#777",
+        marginTop: "10px",
+            fontSize: "18px",
+                letterSpacing: "1px",
+                        }}
+                    >
+    Advanced Intelligent Bio Monitoring System
+        </p>
+
+        </div>
+
+        < div
+style = {{
+    padding: "18px 26px",
+
+        borderRadius: "24px",
+
+            background:
+    "rgba(255,255,255,0.55)",
+
+        backdropFilter:
+    "blur(20px)",
+
+        boxShadow:
+    "0 10px 30px rgba(180,120,255,0.12)",
+
+        border:
+    "1px solid rgba(186,104,255,0.15)",
+                    }}
+                >
+
+    <p
+                        style={
+    {
+        margin: 0,
+            color: "#34C56B",
+                fontWeight: "800",
+                    letterSpacing: "2px",
+                        }
+}
+                    >
+                        ● LIVE MONITORING ACTIVE
+    </p>
+
+    </div>
+
+    </motion.div>
+
+{/* GRID */ }
+
+<div
+                style={
+    {
+        display: "grid",
+
+            gridTemplateColumns:
+        "repeat(auto-fit,minmax(290px,1fr))",
+
+            gap: "28px",
+                }
+}
+            >
+
+{
+    patients.map((p, index) => (
+
+        <motion.div
+
+                        key= { index }
+
+                        whileHover = {{
+        y: -8,
+        scale: 1.02,
+    }}
+
+initial = {{
+    opacity: 0,
+        y: 30,
+                        }}
+
+animate = {{
+    opacity: 1,
+        y: 0,
+                        }}
+
+transition = {{
+    delay: index * 0.05,
+                        }}
+
+style = {{
+
+    minHeight: "560px",
+
+        borderRadius: "42px",
+
+            padding: "28px",
+
+                background:
+    "rgba(255,255,255,0.55)",
+
+        backdropFilter:
+    "blur(24px)",
+
+        border:
+    "2px solid rgba(186,104,255,0.20)",
+
+        boxShadow:
+    "0 10px 40px rgba(180,120,255,0.10)",
+
+        display: "flex",
+            flexDirection: "column",
+                justifyContent: "space-between",
+                        }}
+                    >
+
+    {/* TOP */ }
+
+    < div >
+
+    <div
+                                style={
+    {
+        display: "flex",
+            justifyContent: "space-between",
+                alignItems: "center",
+                                }
+}
+                            >
+
+    {/* AVATAR */ }
+
+    < div
+style = {{
+    width: "78px",
+        height: "78px",
+
+            borderRadius: "50%",
+
+                background:
+    "rgba(203,108,230,0.08)",
+
+        display: "flex",
+            justifyContent: "center",
+                alignItems: "center",
+
+                    fontSize: "36px",
+
+                        color: "#B26AF4",
+
+                            border:
+    "2px solid rgba(203,108,230,0.15)",
+                                    }}
+                                >
+                                    ⌾
+</div>
+
+{/* BED */ }
+
+<div
+                                    style={
+    {
+        textAlign: "right",
+                                    }
+}
+                                >
+
+    <h3
+                                        style={
+    {
+        margin: 0,
+
+            fontSize: "16px",
+
+                color: "#A855F7",
+
+                    fontWeight: "800",
+
+                        letterSpacing: "1px",
+                                        }
+}
+                                    >
+    { p.bed }
+    </h3>
+
+    < p
+style = {{
+    marginTop: "6px",
+
+        color: "#888",
+
+            fontSize: "14px",
+                                        }}
+                                    >
+    { p.ward }
+    </p>
+
+    </div>
+
+    </div>
+
+{/* NAME */ }
+
+<div
+                                style={
+    {
+        marginTop: "24px",
+                                }
+}
+                            >
+
+    <h1
+                                    style={
+    {
+        margin: 0,
+
+            fontSize: "42px",
+
+                fontWeight: "800",
+
+                    color: "#222",
+                                    }
+}
+                                >
+    { p.name }
+    </h1>
+
+    < p
+style = {{
+    marginTop: "8px",
+
+        color: "#888",
+
+            letterSpacing: "2px",
+
+                fontWeight: "700",
+                                    }}
+                                >
+    VT-001
+    </p>
+
+    </div>
+
+{/* CONDITION */ }
+
+<div
+                                style={
+    {
+        marginTop: "42px",
+                                }
+}
+                            >
+
+    <p
+                                    style={
+    {
+        fontSize: "13px",
+
+            letterSpacing: "5px",
+
+                fontWeight: "700",
+
+                    color: "#888",
+                                    }
+}
+                                >
+    CONDITION
+    </p>
+
+    < div
+style = {{
+    marginTop: "16px",
+
+        width: "fit-content",
+
+            padding:
+    "10px 18px",
+
+        borderRadius: "40px",
+
+            background:
+    getStatusColor(p.status).bg,
+
+        color:
+    getStatusColor(p.status).text,
+
+        fontWeight: "800",
+
+            letterSpacing: "2px",
+
+                boxShadow:
+    "0 4px 14px rgba(0,0,0,0.05)",
+                                    }}
+                                >
+                                    ● { p.status.toUpperCase() }
+</div>
+
+    </div>
+
+{/* STATUS BOX */ }
+
+<div
+                                style={
+    {
+        marginTop: "42px",
+
+            padding: "20px",
+
+                borderRadius: "24px",
+
+                    background:
+        "rgba(255,255,255,0.5)",
+
+            border:
+        "1px solid rgba(0,0,0,0.04)",
+
+            color: "#777",
+
+                fontWeight: "700",
+
+                    letterSpacing: "2px",
+
+                        fontSize: "13px",
+                                }
+}
+                            >
+                                🛡 NOMINAL • NO ACTIVE ALERTS
+    </div>
+
+    </div>
+
+{/* BOTTOM */ }
+
+<div
+                            style={
+    {
+        marginTop: "40px",
+
+            display: "flex",
+                justifyContent: "space-between",
+                    alignItems: "center",
+                            }
+}
+                        >
+
+    <div>
+
+    <p
+                                    style={
+    {
+        margin: 0,
+
+            fontSize: "13px",
+
+                color: "#9CA3AF",
+
+                    fontWeight: "700",
+
+                        letterSpacing: "2px",
+                                    }
+}
+                                >
+    DATA PACKET
+        </p>
+
+        < p
+style = {{
+    marginTop: "8px",
+
+        fontSize: "18px",
+
+            fontWeight: "800",
+
+                color: "#555",
+                                    }}
+                                >
+    PORT
+    </p>
+
+    </div>
+
+    < motion.button
+
+whileHover = {{
+    scale: 1.05,
+                                }}
+
+whileTap = {{
+    scale: 0.96,
+                                }}
+
+style = {{
+    border: "none",
+
+        padding:
+    "18px 28px",
+
+        borderRadius: "24px",
+
+            background:
+    "rgba(255,255,255,0.75)",
+
+        fontWeight: "800",
+
+            fontSize: "18px",
+
+                color: "#64748B",
+
+                    cursor: "pointer",
+
+                        boxShadow:
+    "0 4px 18px rgba(0,0,0,0.06)",
+                                }}
+                            >
+    Export CSV
+        </motion.button>
+
+        </div>
+
+        </motion.div>
+
+                ))}
+
+</div>
+
+    </div>
+    );
+}
